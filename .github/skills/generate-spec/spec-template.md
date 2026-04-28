@@ -150,7 +150,7 @@ CRITERIO-1.3: [nombre del caso borde]
 ## 3. LISTA DE TAREAS
 
 > Checklist accionable para todos los agentes. Marcar cada ítem (`[x]`) al completarlo.
-> El Orchestrator monitorea este checklist para determinar el progreso.
+> **IMPORTANTE**: Los tests se generan según la matriz 3-2-1. NO crear pruebas adicionales.
 
 ### Backend
 
@@ -161,14 +161,44 @@ CRITERIO-1.3: [nombre del caso borde]
 - [ ] Implementar router/controller `/api/v1/[features]` — endpoints CRUD
 - [ ] Registrar en punto de entrada de la app
 
-#### Tests Backend
-- [ ] `test_[service]_create_success` — happy path creación
-- [ ] `test_[service]_create_duplicate_raises_conflict` — error unicidad
-- [ ] `test_[service]_get_not_found_raises_error` — error not found
-- [ ] `test_[repo]_insert_returns_document` — repositorio insert
-- [ ] `test_[router]_post_returns_201` — endpoint creación
-- [ ] `test_[router]_post_returns_401_no_token` — sin autenticación
-- [ ] `test_[router]_get_returns_200` — listado
+#### Tests Backend (Matriz 3-2-1)
+
+**Regla: POR CADA MÉTODO = 3 tests | POR CADA ENDPOINT = 3 tests | POR CADA ADAPTER = 2 tests**
+
+```
+╔════════════════════════════════════════════════════════════════════════════════╗
+║             MATRIZ DE PRUEBAS — CANTIDAD FIJA                    ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  SERVICE (3 tests por método):                                      ║
+║  ├─ happy path:    create_{name}_success                      ║
+║  ├─ error:       create_{name}_throws_{Exception}             ║
+║  └─ edge case:   create_{name}_with_empty_{field}_throws      ║
+║                                                                ║
+║  CONTROLLER (3 tests por endpoint):                             ║
+║  ├─ 200/201:   {method}_{endpoint}_returns_200              ║
+║  ├─ 400:      {method}_{endpoint}_returns_400              ║
+║  └─ 404:      {method}_{endpoint}_returns_404              ║
+║                                                                ║
+║  ADAPTER (2 tests por método):                               ║
+║  ├─ save:      save_returns_entity                        ║
+║  └─ findById:  findById_returns_optional                 ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Ejemplo concreto (Feature = Account):**
+
+| Test Class | Cantidad | Tests a crear |
+|-----------|---------|------------|
+| `AccountServiceTests.java` | 3 por método | create: 3, getById: 3, deposit: 3, withdraw: 3 |
+| `AccountControllerTests.java` | 3 por endpoint | POST: 3, GET: 3, PUT: 3, DELETE: 3 |
+| `AccountRepositoryAdapterTests.java` | 2 por método | save: 2, findById: 2, findAll: 2 |
+
+**No generar:**
+- Tests de métodos no definidos en la spec
+- Tests de integración (usan mocks)
+- Tests de más de un método por test
 
 ### QA
 - [ ] Ejecutar skill `/gherkin-case-generator` → criterios CRITERIO-1.1, 1.2, 1.3

@@ -162,8 +162,8 @@ Inyectadas automáticamente por Copilot cuando el archivo activo coincide:
 
 | Archivo activo | Instructions aplicadas |
 |---|---|
-| `backend/**/*.py` (o equivalente) | `instructions/backend.instructions.md` |
-| `backend/tests/**` | `instructions/tests.instructions.md` |
+| `src/main/java/**/*.java` | `instructions/backend.instructions.md` |
+| `src/test/java/**/*.java` | `instructions/tests.instructions.md` |
 
 > Si el proyecto usa otro stack, ajusta los patrones `applyTo:` de cada archivo.
 

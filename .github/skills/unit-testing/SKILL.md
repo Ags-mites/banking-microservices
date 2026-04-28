@@ -1,6 +1,6 @@
 ---
 name: unit-testing
-description: Genera tests unitarios e integración para backend Java. Lee la spec y el código implementado. Requiere spec APPROVED e implementación completa.
+description: Genera tests unitarios para backend Java según la tabla de pruebas de la spec.Requiere spec APPROVED.
 argument-hint: "<nombre-feature>"
 ---
 
@@ -10,14 +10,40 @@ argument-hint: "<nombre-feature>"
 
 - [ ] Cobertura ≥ 80% en lógica de negocio (quality gate bloqueante)
 - [ ] Tests aislados — sin conexión a DB real ni servicios externos (siempre mocks)
-- [ ] Escenario feliz + errores de negocio + validaciones de entrada cubiertos
+- [ ] Solo pruebas definidas en la spec — NO crear pruebas adicionales
 - [ ] Los cambios no rompen contratos existentes del módulo
+
+## Matriz de Pruebas — CANTIDAD FIJA
+
+**La spec define exactamente qué pruebas generar. NO inventar más.**
+
+| Capa | Test | Cantidad | Escenario |
+|------|------|---------|---------|
+| **Service** | `*ServiceTests.java` | **3 por método** | 1 happy + 1 error + 1 edge |
+| **Controller** | `*ControllerTests.java` | **3 por endpoint** | 200/201 + 400 + 404 |
+| **Adapter** | `*RepositoryAdapterTests.java` | **2 por método** | save + findById |
+
+### Regla: 3-2-1
+```
+POR CADA MÉTODO EN SERVICE:
+  + 1 test happy path
+  + 1 test error de negocio
+  + 1 test edge case
+
+POR CADA ENDPOINT EN CONTROLLER:
+  + 1 test éxito (200/201)
+  + 1 test validación (400)
+  + 1 test not found (404)
+
+POR CADA MÉTODO EN REPOSITORY ADAPTER:
+  + 1 test save
+  + 1 test findById
+```
 
 ## Prerequisito — Lee en paralelo
 
 ```
-[[specs/<feature>.spec.md]]        (criterios de aceptación)
-código implementado en backend/
+[[specs/<feature>.spec.md]]        (Sección 3: Lista de Tareas → Tests)
 [[instructions/backend.instructions.md]]   (JUnit 5 + Mockito)
 ```
 
