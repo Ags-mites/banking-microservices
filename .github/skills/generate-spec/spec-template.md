@@ -36,7 +36,7 @@ Para:        [valor o beneficio esperado por el negocio]
 Prioridad:   Alta / Media / Baja
 Estimación:  XS / S / M / L / XL
 Dependencias: HU-X, HU-Y o Ninguna
-Capa:        Backend / Frontend / Ambas
+Capa:        Backend
 ```
 
 #### Criterios de Aceptación — HU-01
@@ -137,32 +137,6 @@ CRITERIO-1.3: [nombre del caso borde]
 - **Response 204**: eliminado exitosamente
 - **Response 404**: no encontrado
 
-### Diseño Frontend
-
-#### Componentes nuevos
-| Componente | Archivo | Props principales | Descripción |
-|------------|---------|------------------|-------------|
-| `FeatureCard` | `components/FeatureCard` | `item, onDelete, onEdit` | Tarjeta de un ítem |
-| `FeatureFormModal` | `components/FeatureFormModal` | `isOpen, onSubmit, onClose` | Modal de creación/edición |
-
-#### Páginas nuevas
-| Página | Archivo | Ruta | Protegida |
-|--------|---------|------|-----------|
-| `FeaturePage` | `pages/FeaturePage` | `/features` | sí / no |
-
-#### Hooks y State
-| Hook | Archivo | Retorna | Descripción |
-|------|---------|---------|-------------|
-| `useFeature` | `hooks/useFeature` | `{ items, loading, error, create, update, remove }` | CRUD del feature |
-
-#### Services (llamadas API)
-| Función | Archivo | Endpoint |
-|---------|---------|---------|
-| `getFeatures(token)` | `services/featureService` | `GET /api/v1/features` |
-| `createFeature(data, token)` | `services/featureService` | `POST /api/v1/features` |
-| `updateFeature(uid, data, token)` | `services/featureService` | `PUT /api/v1/features/{uid}` |
-| `deleteFeature(uid, token)` | `services/featureService` | `DELETE /api/v1/features/{uid}` |
-
 ### Arquitectura y Dependencias
 - Paquetes nuevos requeridos: ninguno / listar si aplica
 - Servicios externos: listar integraciones (auth, storage, third-party APIs)
@@ -195,24 +169,6 @@ CRITERIO-1.3: [nombre del caso borde]
 - [ ] `test_[router]_post_returns_201` — endpoint creación
 - [ ] `test_[router]_post_returns_401_no_token` — sin autenticación
 - [ ] `test_[router]_get_returns_200` — listado
-
-### Frontend
-
-#### Implementación
-- [ ] Crear `[feature]Service` — funciones para todos los endpoints
-- [ ] Crear `use[Feature]` — hook/store con estado, loading, error y acciones CRUD
-- [ ] Implementar `[Feature]Card` + estilos
-- [ ] Implementar `[Feature]FormModal` + estilos
-- [ ] Implementar `[Feature]Page` + estilos — layout completo
-- [ ] Registrar ruta `/[features]` en el sistema de rutas
-
-#### Tests Frontend
-- [ ] `[FeatureCard] renders name correctly`
-- [ ] `[FeatureCard] calls onDelete when button clicked`
-- [ ] `[FeatureFormModal] submits form with correct data`
-- [ ] `use[Feature] loads items on mount`
-- [ ] `use[Feature] handles create error gracefully`
-- [ ] `[FeaturePage] renders list of items`
 
 ### QA
 - [ ] Ejecutar skill `/gherkin-case-generator` → criterios CRITERIO-1.1, 1.2, 1.3

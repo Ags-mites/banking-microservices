@@ -17,20 +17,15 @@ This file defines general guidance for all AI agents working in this repository,
 [FASE 1 — Secuencial]
 [[agents/spec-generator.agent.md]]    → [[skills/generate-spec/SKILL.md]]      → [[specs/<feature>.spec.md]]
 
-[FASE 2 — Paralelo ∥]
-[[agents/database.agent.md]]    → modelos, migrations, seeders  (si hay cambios de DB)
-[[agents/backend-developer.agent.md]] → capas del proyecto (routes/services/repos/models)
-[[agents/frontend-developer.agent.md]]→ páginas / componentes / hooks / servicios
+[FASE 2 — Paralelo]
+[[agents/database.agent.md]]    → modelos, migrations (si hay cambiosDB)
+[[agents/backend-developer.agent.md]] → backend (routes/services/repos/models)
 
-[FASE 3 — Paralelo ∥]
+[FASE 3]
 [[agents/test-engineer-backend.agent.md]]  → src/test/java/
-[[agents/test-engineer-frontend.agent.md]] → frontend/src/__tests__/
 
 [FASE 4 — Secuencial]
 [[agents/qa.agent.md]]          → [[skills/gherkin-case-generator/SKILL.md]], [[skills/risk-identifier/SKILL.md]], …
-
-[FASE 5 — Opcional]
-[[agents/documentation.agent.md]] → README, API docs, ADRs
 ```
 
 ## Agent Skills (slash commands)
@@ -43,8 +38,7 @@ Skills are portable instruction sets invokable as `/command` in Copilot Chat. Th
 | [[skills/asdd-orchestrate/SKILL.md]] | `/asdd-orchestrate` | Orquesta el flujo completo ASDD o consulta estado |
 | [[skills/generate-spec/SKILL.md]] | `/generate-spec` | Genera spec técnica en [[specs/]] |
 | [[skills/implement-backend/SKILL.md]] | `/implement-backend` | Implementa feature completo en el backend |
-| [[skills/implement-frontend/SKILL.md]] | `/implement-frontend` | Implementa feature completo en el frontend |
-| [[skills/unit-testing/SKILL.md]] | `/unit-testing` | Genera suite de tests (backend + frontend) |
+| [[skills/unit-testing/SKILL.md]] | `/unit-testing` | Genera suite de tests
 
 ### QA
 | Skill | Slash Command | Descripción |
@@ -60,13 +54,13 @@ Los agentes deben cargar estos archivos como **primer paso** antes de generar cu
 
 | Documento | Ruta | Agentes que lo cargan |
 |---|---|---|
-| Lineamientos de Desarrollo | [[docs/lineamientos/dev-guidelines.md]] | [[agents/backend-developer.agent.md]], [[agents/frontend-developer.agent.md]], [[agents/database.agent.md]] |
-| Lineamientos QA | [[docs/lineamientos/qa-guidelines.md]] | [[agents/test-engineer-backend.agent.md]], [[agents/test-engineer-frontend.agent.md]], [[agents/qa.agent.md]] |
+| Lineamientos de Desarrollo | [[docs/lineamientos/dev-guidelines.md]] | [[agents/backend-developer.agent.md]], [[agents/database.agent.md]] |
+| Lineamientos QA | [[docs/lineamientos/qa-guidelines.md]] | [[agents/test-engineer-backend.agent.md]], [[agents/qa.agent.md]] |
 | Reglas de Oro | [[AGENTS.md]] | Todos (siempre activas) |
-| Definition of Done | [[copilot-instructions.md]] | [[agents/test-engineer-backend.agent.md]], [[agents/test-engineer-frontend.agent.md]], [[agents/qa.agent.md]], [[agents/orchestrator.agent.md]] |
+| Definition of Done | [[copilot-instructions.md]] | [[agents/test-engineer-backend.agent.md]], [[agents/qa.agent.md]], [[agents/orchestrator.agent.md]] |
 | Definition of Ready | [[copilot-instructions.md]] | [[agents/spec-generator.agent.md]], [[agents/orchestrator.agent.md]] |
-| Stack y restricciones | [[instructions/backend.instructions.md]] | [[agents/backend-developer.agent.md]], [[agents/frontend-developer.agent.md]], [[agents/database.agent.md]], [[agents/spec-generator.agent.md]] |
-| Arquitectura | [[instructions/backend.instructions.md]] | [[agents/backend-developer.agent.md]], [[agents/frontend-developer.agent.md]], [[agents/spec-generator.agent.md]] |
+| Stack y restricciones | [[instructions/backend.instructions.md]] | [[agents/backend-developer.agent.md]], [[agents/database.agent.md]], [[agents/spec-generator.agent.md]] |
+| Arquitectura | [[instructions/backend.instructions.md]] | [[agents/backend-developer.agent.md]], [[agents/spec-generator.agent.md]] |
 
 ---
 
@@ -102,9 +96,8 @@ Los agentes deben cargar estos archivos como **primer paso** antes de generar cu
 1. **No implementation without a spec.** Always check [[specs/]] first.
 2. **Backend architecture is layered** — follow the pattern defined in [[instructions/backend.instructions.md]]. Never bypass layers.
 3. **Dependency wiring happens at the entry layer** (controller/router) — inject dependencies downward, never upward.
-4. **UI state follows the project architecture** — use a single authoritative source of truth; no parallel state sources.
-5. **I/O operations follow the project concurrency model** — sync or async as defined in [[instructions/backend.instructions.md]].
-6. **Never commit secrets or credentials** — `.env`, credential files and API keys must be in `.gitignore`.
+4. **I/O operations follow the project concurrency model** — sync or async as defined in [[instructions/backend.instructions.md]].
+5. **Never commit secrets or credentials** — `.env`, credential files and API keys must be in `.gitignore`.
 
 ## Development Commands & Integration Notes
 

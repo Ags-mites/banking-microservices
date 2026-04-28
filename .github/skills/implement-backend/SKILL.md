@@ -1,14 +1,14 @@
 ---
 name: implement-backend
-description: Implementa un feature completo en el backend con Spring Boot 3.x / Java 17+ y Arquitectura Hexagonal. Requiere spec con status APPROVED en .github/specs/.
+description: Implementa un feature completo en el backend con Spring Boot 4 / Java 21 y Arquitectura Hexagonal. Requiere spec con status APPROVED en .github/specs/.
 argument-hint: "<nombre-feature>"
 ---
 
-# Implement Backend — Spring Boot 3.x / Java 17+ Hexagonal Architecture
+# Implement Backend — Spring Boot 4 / Java 21 Hexagonal Architecture
 
 ## Prerequisitos
 1. **Leer spec**: [[specs/<feature>.spec.md]] — sección 2 (entidades, casos de uso, puertos)
-2. **Stack & Arquitectura**: [[instructions/backend.instructions.md]] (Spring Boot 3.x, Hexagonal)
+2. **Stack & Arquitectura**: [[instructions/backend.instructions.md]] (Spring Boot 4, Hexagonal)
 3. **Directrices generales**: [[docs/lineamientos/dev-guidelines.md]]
 4. **BaseDatos.sql**: Ver esquema definido en el script SQL centralizado
 

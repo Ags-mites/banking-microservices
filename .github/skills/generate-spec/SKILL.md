@@ -14,7 +14,7 @@ Una historia puede generar spec solo si cumple:
 - [ ] Términos canónicos del dominio (ver [[copilot-instructions.md]] → Diccionario de Dominio)
 - [ ] Criterios BDD: **Dado / Cuando / Entonces** (feliz + validaciones + errores)
 - [ ] Contrato API explícito si aplica (método, ruta `/api/v1/...`, request, response, códigos HTTP)
-- [ ] Alineada con arquitectura y stack (Spring Boot 3.x + Java 17+ + [Base de Datos] + React + Firebase)
+- [ ] Alineada con arquitectura y stack (Spring Boot 4 / Java 21 + [Base de Datos])
 - [ ] Dependencias y riesgos identificados
 
 Si el requerimiento no cumple el DoR → listar las preguntas pendientes antes de generar.
@@ -22,7 +22,7 @@ Si el requerimiento no cumple el DoR → listar las preguntas pendientes antes d
 ## Proceso
 
 1. Busca requerimiento en [[requirements/<feature>.md]] (si existe, úsalo)
-2. Lee las instrucciones de stack: [[instructions/backend.instructions.md]], [[instructions/frontend.instructions.md]]
+2. Lee las instrucciones de stack: [[instructions/backend.instructions.md]]
 3. Explora código existente — no duplicar modelos ni endpoints existentes
 4. Valida DoR (arriba) — si hay ambigüedades, lista preguntas antes de continuar
 5. Usa plantilla: [[skills/generate-spec/spec-template.md]] EXACTAMENTE
@@ -46,11 +46,11 @@ related-specs: []
 ## Secciones obligatorias
 
 - `## 1. REQUERIMIENTOS` — HU (Como/Quiero/Para) + criterios Gherkin + reglas de negocio
-- `## 2. DISEÑO` — modelos de datos, endpoints API (request/response/HTTP codes), frontend
-- `## 3. LISTA DE TAREAS` — checklists backend `[ ]`, frontend `[ ]`, QA `[ ]`
+- `## 2. DISEÑO` — modelos de datos, endpoints API (request/response/HTTP codes)
+- `## 3. LISTA DE TAREAS` — checklists backend `[ ]`, QA `[ ]`
 
 ## Restricciones
 
 - Solo leer + crear. No modificar código existente.
 - Status siempre `DRAFT`. El usuario aprueba antes de implementar.
-- Stack tecnológico: Spring Boot 3.x / Java 17+ (Backend), React (Frontend)
+- Stack tecnológico: Spring Boot 4 / Java 21 (Backend)

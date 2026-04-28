@@ -1,8 +1,8 @@
 ---
-applyTo: "src/test/java/**/*.java,frontend/src/__tests__/**/*.{js,jsx}"
+applyTo: "src/test/java/**/*.java"
 ---
 
-> **Scope**: Las reglas de backend aplican a proyectos con tests en Java (Spring Boot 3.x + JUnit 5); las de frontend aplican a proyectos con tests en JS/JSX. En proyectos con otro stack, adaptar las herramientas y convenciones manteniendo los principios (independencia, aislamiento, AAA, cobertura ≥ 80%).
+> **Scope**: Las reglas de backend aplican a proyectos con tests en Java (Spring Boot 4 + JUnit 5). En proyectos con otro stack, adaptar las herramientas y convenciones manteniendo los principios (independencia, aislamiento, AAA, cobertura ≥ 80%).
 
 # Instrucciones para Archivos de Pruebas Unitarias
 
@@ -122,128 +122,6 @@ var response = new RestTemplate().getForObject("https://api.example.com", String
 // ✅ SIEMPRE — mockear
 @Mock
 private ExternalServiceClient externalService;
-```
-
-## Frontend (Vitest + React Testing Library)
-
-### Framework Obligatorio
-- **Test Framework**: Vitest
-- **Rendering**: React Testing Library
-- **Mocking**: `vi.mock()`
-- **Assertions**: `@testing-library/jest-dom`
-
-### Estructura AAA
-
-```jsx
-describe('AccountForm', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-  
-  it('renders submit button when form is valid', () => {
-    // ARRANGE
-    const mockOnSubmit = vi.fn();
-    const { getByRole, getByLabelText } = render(<AccountForm onSubmit={mockOnSubmit} />);
-    
-    // ACT
-    const accountInput = getByLabelText(/account number/i);
-    const submitButton = getByRole('button', { name: /submit/i });
-    
-    fireEvent.change(accountInput, { target: { value: 'ACC-001' } });
-    fireEvent.click(submitButton);
-    
-    // ASSERT
-    expect(mockOnSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ accountNumber: 'ACC-001' })
-    );
-    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-  });
-  
-  it('disables submit button when form has errors', () => {
-    // ARRANGE
-    const { getByRole } = render(<AccountForm />);
-    
-    // ACT
-    const submitButton = getByRole('button', { name: /submit/i });
-    
-    // ASSERT
-    expect(submitButton).toBeDisabled();
-  });
-});
-```
-
-### Convenciones de Nomenclatura
-
-- **Describe**: nombre del componente/hook
-- **It/Test**: `{verbo} {qué hace} {condición}`
-  - ✅ `renders submit button when form is valid`
-  - ✅ `displays error message on network failure`
-  - ❌ `test renders`, ❌ `AccountFormTest`, ❌ `test1`
-
-## Estructura de Archivos Obligatoria
-
-```
-src/test/java/com/example/<service>/
-  domain/service/
-    AccountServiceTests.java
-  infrastructure/input/
-    AccountControllerTests.java
-  infrastructure/output/
-    AccountRepositoryAdapterTests.java
-
-frontend/src/__tests__/
-  components/[ComponentName].test.jsx
-  hooks/use[HookName].test.js
-  services/[ServiceName].test.js
-```
-
-## Cobertura ≥ 80% — BLOQUEANTE (PR Auto-Rechazado)
-
-**Reglas Críticas**:
-- ✅ PR aprovado si: Cobertura ≥ 80% en TODAS las rutas
-- ❌ PR rechazado si: Cobertura < 80% en CUALQUIER archivo nuevo o modificado
-- ❌ PR rechazado si: Cobertura de Domain < 85%
-- ❌ PR rechazado si: Cobertura de Service Handlers < 85%
-- ❌ PR rechazado si: Cobertura de Controllers < 80%
-
-**Por Capa** (mínimos innegociables):
-
-| Capa | Cobertura mínima | Justificación |
-|------|------------------|---------------|
-| Domain (entidades, lógica) | 85% | Lógica pura, alta criticidad |
-| Application (dto, mappers) | 85% | High-risk workflows |
-| Infrastructure (repos, configs) | 75% | Lower risk, repetitive |
-| API (Controllers, endpoints) | 80% | Routing, validation |
-| Frontend (Components, hooks) | 80% | UI logic |
-
-**Medición en Pipeline**:
-
-```bash
-# Backend — JUnit 5 + JaCoCo
-./mvnw verify
-
-# Verificar cobertura mínima
-./mvnw verify -Djacoco.min.coverage=0.80
-# Si coverage < 80%, exit 1
-
-# Frontend — Vitest
-npm run test:coverage
-
-# Si coverage < 80%, exit 1
-```
-
-**GitHub Actions Integration**:
-
-```yaml
-- name: Check Coverage ≥ 80%
-  run: |
-    ./mvnw verify
-    COVERAGE=$(cat target/site/jacoco/index.xml | grep -oP 'LINE.*?"counter" value="\K[0-9.]+' | head -1)
-    if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-      echo "❌ Coverage $COVERAGE% < 80% — PR REJECTED"
-      exit 1
-    fi
-    echo "✅ Coverage $COVERAGE% >= 80% — PR APPROVED"
 ```
 
 ## Prohibiciones Absolutas

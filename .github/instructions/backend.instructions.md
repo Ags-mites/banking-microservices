@@ -2,9 +2,9 @@
 applyTo: "backend/**/*.java"
 ---
 
-> **Scope**: Se aplica a proyectos con capa backend en Spring Boot 3.x / Java 17+. Si el proyecto usa un lenguaje o estructura diferente, adaptar la sección de convenciones y wiring al stack real definido en esta misma instrucción.
+> **Scope**: Se aplica a proyectos con capa backend en Spring Boot 4 / Java 21. Si el proyecto usa un lenguaje o estructura diferente, adaptar la sección de convenciones y wiring al stack real definido en esta misma instrucción.
 
-# Instrucciones para Backend (Spring Boot 3.x / Java 17+)
+# Instrucciones para Backend (Spring Boot 4 / Java 21)
 
 ## Arquitectura Obligatoria — Hexagonal (Ports and Adapters)
 
@@ -356,7 +356,7 @@ public class ClienteEventListener {
 }
 ```
 
-## Convenciones de Código — Java 17+ (Obligatorio)
+## Convenciones de Código — Java 21 (Obligatorio)
 
 - **Records**: para DTOs inmutables `record CreateAccountDto(...) {}`
 - **Optional**: para retornos que pueden ser nulos `Optional<Account> findById()`

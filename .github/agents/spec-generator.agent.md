@@ -1,7 +1,7 @@
 ---
 name: Spec Generator
 description: Genera especificaciones técnicas detalladas (ASDD) a partir de requerimientos de negocio. Úsalo antes de cualquier desarrollo.
-model: Claude Haiku 4.5 (copilot)
+model: GPT-5.2 / Gemini 3.1 Pro
 tools:
   - search
   - web/fetch
@@ -13,10 +13,6 @@ handoffs:
   - label: Implementar en Backend
     agent: Backend Developer
     prompt: Usa la spec generada en [[specs/]] para implementar el backend.
-    send: false
-  - label: Implementar en Frontend
-    agent: Frontend Developer
-    prompt: Usa la spec generada en [[specs/]] para implementar el frontend.
     send: false
 ---
 

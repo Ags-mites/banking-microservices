@@ -31,22 +31,15 @@ Identifica qué flujos tienen mejor ROI para automatizar y define la hoja de rut
 ## Selección del framework
 
 ```
-PARA APLICACIONES WEB (E2E):
-  Playwright (JS/TS)    → Primera opción para frontends React — multi-browser, CI-first
-  Cypress               → Si ya existe en el proyecto
-  Selenium WebDriver    → Para casos legacy
-
-PARA APIs REST (sin UI):
+PARA APIs REST:
   JUnit 5 + RestAssured   → Para backend Spring Boot
-  pytest + requests       → Para backends Python
-  Supertest               → Para backends Node.js
 
 PARA PERFORMANCE:
   k6                      → Si hay SLAs definidos
   JMeter                  → Para tests de carga complejos
 
 CRITERIO:
-  1. Concordancia con el stack tecnológico (Spring Boot 3.x / Java 17+)
+  1. Concordancia con el stack tecnológico (Spring Boot 4 / Java 21)
   2. Curva de aprendizaje del equipo
   3. Integración con CI/CD actual (GitHub Actions, Jenkins)
   4. Costo de mantenimiento a largo plazo
@@ -87,5 +80,5 @@ Costo estimado de implementación: X sprints
 ## Restricciones
 
 - Solo crear archivos en `docs/output/qa/`
-- Framework debe ser compatible con Spring Boot 3.x / Java 17+
-- Priorizar Playwright para frontend (React) y JUnit 5 + RestAssured para backend
+- Framework debe ser compatible con Spring Boot 4 / Java 21
+- Priorizar JUnit 5 + RestAssured para backend

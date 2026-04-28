@@ -1,6 +1,7 @@
 ---
 name: QA Agent
 description: Genera estrategia QA completa para un feature. Ejecutar después de implementación y tests.
+model: GPT-5.4 mini / Gemini 2.5 Pro
 tools:
   - read/readFile
   - edit/createFile
@@ -32,22 +33,19 @@ Eres el QA Lead del equipo ASDD. **Produces artefactos de calidad basados en la 
 - ❌ Flujos críticos sin tests automatizados (Create idempotent, Concurrency check, Partial updates, Financial calc)
 - ❌ Falta archivo obligatorio `docs/output/qa/test-strategy.md`
 - ❌ Controllers sin Constructor Injection (❌ `@Autowired` field injection)
-- ❌ Frontend con importaciones Firebase
-- ❌ Tests de Backend sin JUnit 5 + Mockito (NO usar xUnit, NO usar NUnit)
-- ❌ Tests de Frontend sin Vitest + React Testing Library
+- ❌ Tests de Backend sin JUnit 5 + Mockito
 
-**Consecuencia**: 🚫 PR AUTO-RECHAZADO si NO cumple estos 11 requisitos
+**Consecuencia**: 🚫 PR AUTO-RECHAZADO si NO cumple estos requisitos
 
 ## Primer Paso — Verificación de Cobertura
 
 ```bash
 # ANTES de ejecutar skills, medir cobertura
 backend/: ./mvnw verify (JaCoCo report)
-frontend/tests/: npm run test:coverage
 
 # Si cobertura < 80%:
 STOP — No proceder con QA strategy
-Retornar al Backend/Frontend Developer con reporte:
+Retornar al Backend Developer con reporte:
   - Líneas no cubiertas por ruta crítica
   - Comandos sin tests
   - Handlers pendientes
@@ -82,7 +80,7 @@ Automatizar SIEMPRE estos flujos (si aplican al feature):
 ```
 [[docs/lineamientos/qa-guidelines.md]]
 [[specs/<feature>.spec.md]]
-tests en src/test/java/ y frontend/src/__tests__/
+tests en src/test/java/
 Cobertura report (JaCoCo JSON/XML)
 ```
 
@@ -110,7 +108,6 @@ Cobertura report (JaCoCo JSON/XML)
 
 ## Coverage Status
 - Backend: XX% (target: ≥80%, Domain ≥85%)
-- Frontend: XX% (target: ≥80%)
 - **🚫 Blocker**: Coverage < 80% rechaza PR automáticamente
 
 ## Critical Flows Tested (Matriz)

@@ -1,10 +1,10 @@
 ---
 name: unit-testing
-description: Genera tests unitarios e integración para backend y/o frontend. Lee la spec y el código implementado. Requiere spec APPROVED e implementación completa.
-argument-hint: "<nombre-feature> [backend|frontend|ambos]"
+description: Genera tests unitarios e integración para backend Java. Lee la spec y el código implementado. Requiere spec APPROVED e implementación completa.
+argument-hint: "<nombre-feature>"
 ---
 
-# Unit Testing
+# Unit Testing — Backend Java
 
 ## Definition of Done — verificar al completar
 
@@ -17,9 +17,8 @@ argument-hint: "<nombre-feature> [backend|frontend|ambos]"
 
 ```
 [[specs/<feature>.spec.md]]        (criterios de aceptación)
-código implementado en backend/ y/o frontend/
+código implementado en backend/
 [[instructions/backend.instructions.md]]   (JUnit 5 + Mockito)
-[[instructions/frontend.instructions.md]]  (Vitest + Testing Library)
 ```
 
 ## Output por scope
@@ -31,14 +30,6 @@ código implementado en backend/ y/o frontend/
 | `domain/service/<Feature>ServiceTests.java` | Lógica de negocio: happy path + errores |
 | `infrastructure/input/<Feature>ControllerTests.java` | Endpoints: 200/201, 400, 404, 409 |
 | `infrastructure/output/<Feature>RepositoryAdapterTests.java` | Adaptador: parámetros y retornos correctos |
-
-### Frontend → `frontend/src/__tests__/`
-
-| Archivo | Cubre |
-|---------|-------|
-| `components/<Feature>.test.jsx` | Render + interacciones (click, submit) |
-| `hooks/use<Feature>.test.js` | Estado inicial + respuesta API + error handling |
-| `pages/<Feature>Page.test.jsx` | Render completo con providers |
 
 ## Patrones core
 

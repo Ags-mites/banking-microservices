@@ -1,7 +1,7 @@
 ---
 name: Database Agent
-description: Diseña y gestiona esquemas de datos basados en BaseDatos.sql centralizado. Úsalo cuando la spec incluye cambios en modelos de datos. Trabaja en paralelo o antes del backend-developer.
-model: Claude Sonnet 4.6 (copilot)
+description: Diseña y gestiona esquemas de datos basados en BaseDatos.sql centralizado. Úsalo cuando la spec incluye cambios en modelos de datos.
+model: GPT-5.4 mini / Gemini 2.5 Pro 
 tools:
   - read/readFile
   - edit/createFile
