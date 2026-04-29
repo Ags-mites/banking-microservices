@@ -108,13 +108,17 @@ class AccountServiceTests {
 ### Mocks: Regla de Oro
 
 ```java
-// ❌ NUNCA HACER — tocar BD real
-@Autowired
-private AccountJpaRepository jpaRepository;  // PROHIBIDO en tests unitarios
+// ❌ NUNCA HACER — tocar BD real con @Autowired
+// @Autowired
+// private AccountJpaRepository jpaRepository;  // PROHIBIDO en tests unitarios
 
-// ✅ SIEMPRE — mockear
+// ✅ SIEMPRE — mockear con @Mock
 @Mock
 private AccountRepositoryPort accountRepository;
+
+// ✅ SIEMPRE — inject con @InjectMocks
+@InjectMocks
+private AccountService accountService;
 
 // ❌ NUNCA — APIs reales
 var response = new RestTemplate().getForObject("https://api.example.com", String.class);

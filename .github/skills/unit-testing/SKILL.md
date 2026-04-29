@@ -53,7 +53,7 @@ POR CADA MÉTODO EN REPOSITORY ADAPTER:
 
 | Archivo | Cubre |
 |---------|-------|
-| `domain/service/<Feature>ServiceTests.java` | Lógica de negocio: happy path + errores |
+| `application/usecase/<Feature>ServiceTests.java` | Lógica de negocio: happy path + errores |
 | `infrastructure/input/<Feature>ControllerTests.java` | Endpoints: 200/201, 400, 404, 409 |
 | `infrastructure/output/<Feature>RepositoryAdapterTests.java` | Adaptador: parámetros y retornos correctos |
 
@@ -61,7 +61,7 @@ POR CADA MÉTODO EN REPOSITORY ADAPTER:
 
 ```java
 // Backend — JUnit 5 + Mockito (AAA Pattern)
-package com.example.banking.domain.service;
+package com.example.banking.application.usecase;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -242,18 +242,14 @@ await waitFor(() => expect(result.current.data).toHaveLength(1));
 
 ```
 src/test/java/com/example/<service>/
-├── domain/
-│   ├── model/                    # Tests de entidades (lógica de dominio)
-│   │   └── AccountTests.java
-│   └── service/                  # Tests de casos de uso
+├── application/
+│   └── usecase/                  # Tests de casos de uso
 │       └── AccountServiceTests.java
-├── application/                   # Tests de mappers (MapStruct)
-│   └── AccountMapperTests.java
-└── infrastructure/
-    ├── input/                    # Tests de controladores REST
-    │   └── AccountControllerTests.java
-    └── output/                   # Tests de adaptadores
-        └── AccountRepositoryAdapterTests.java
+├── infrastructure/
+│   ├── input/                    # Tests de controladores REST
+│   │   └── AccountControllerTests.java
+│   └── output/                   # Tests de adaptadores
+│       └── AccountRepositoryAdapterTests.java
 ```
 
 ## Restricciones

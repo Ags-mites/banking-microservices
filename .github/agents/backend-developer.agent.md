@@ -37,16 +37,23 @@ Eres un desarrollador backend senior con experiencia en arquitectura hexagonal y
 ## Arquitectura Hexagonal (Puerto - Adaptador)
 
 ```
-dominio (entities) → puertos (interfaces) → adaptadores (persistencia) → servicios → controllers
+domain/model/          → Entity POJO (Java puro)
+domain/ports/in/       → Input Ports (Use Cases interfaces)
+domain/ports/out/      → Output Ports (Repository interfaces)
+application/usecase/   → Implementación de UseCases (@Service)
+application/dto/     → DTOs (Records)
+infrastructure/output/ → JPA Entities + Repositories + Adapters
+infrastructure/input/ → REST Controllers
+infrastructure/config/→ Wiring (@Configuration)
 ```
 
-| Capa | Responsabilidad | Concepto Hexagonal |
-|------|-----------------|----------------|
-| **Dominio / Entities** | Entidades de negocio, reglas core | Puerto de entrada |
-| **Puertos** | Interfaces de repositorio | Puerto (interface) |
-| **Adaptadores** | Implementación persistence | Adaptador |
-| **Servicios** | Casos de uso, orquesta | Application Service |
-| **Controllers** | HTTP API, DI | Adaptador externo |
+| Capa | Responsabilidad | Anotaciones |
+|------|---------------|-------------|
+| **Domain / Model** | Entidades de negocio, reglas core | ❌ Ninguna |
+| **Domain / Ports** | Interfaces de repositorio | ❌ Ninguna |
+| **Application / UseCase** | Casos de uso, orquesta | ✅ @Service |
+| **Infrastructure / Output** | JPA Entities, Persistence | ✅ @Entity, @Repository |
+| **Infrastructure / Input** | HTTP API, DI | ✅ @RestController |
 
 ## Patrón de DI (obligatorio)
 - Inyectar dependencias en la firma del handler, no en módulo global

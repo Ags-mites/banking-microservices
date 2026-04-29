@@ -38,7 +38,7 @@ Usa **[[skills/unit-testing/SKILL.md]]** para generar la suite completa de tests
 
 ```
 src/test/java/com/example/<service>/
-├── domain/service/<Feature>ServiceTests.java   ← unitarios con mocks de repo
+├── application/usecase/<Feature>ServiceTests.java   ← unitarios con mocks de repo
 ├── infrastructure/input/<Feature>ControllerTests.java  ← integración HTTP
 └── infrastructure/output/<Feature>RepositoryAdapterTests.java  ← unitarios con mock
 ```
