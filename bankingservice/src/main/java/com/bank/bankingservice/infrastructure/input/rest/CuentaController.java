@@ -34,23 +34,21 @@ public class CuentaController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createAccount(@RequestBody CuentaCreateRequest request) {
-        Cuenta cuenta = new Cuenta();
-        cuenta.setNumeroCuenta(request.numeroCuenta());
-        cuenta.setTipoCuenta(request.tipoCuenta());
-        cuenta.setSaldoInicial(request.saldoInicial());
-        cuenta.setEstado(request.estado() != null ? request.estado() : true);
-        cuenta.setClienteId(request.clienteId());
-
-        Cuenta createdCuenta = cuentaUseCase.createAccount(cuenta);
+        Cuenta createdCuenta = cuentaUseCase.createAccount(
+                request.clienteId(),
+                request.numeroCuenta(),
+                request.tipoCuenta(),
+                request.saldoInicial()
+        );
 
         CuentaResponse response = new CuentaResponse(
-                createdCuenta.getId(),
-                createdCuenta.getNumeroCuenta(),
-                createdCuenta.getTipoCuenta(),
-                createdCuenta.getSaldoInicial(),
-                createdCuenta.getSaldoDisponible(),
-                createdCuenta.getEstado(),
-                createdCuenta.getClienteId()
+                createdCuenta.id(),
+                createdCuenta.numeroCuenta(),
+                createdCuenta.tipoCuenta(),
+                createdCuenta.saldoInicial(),
+                createdCuenta.saldoDisponible(),
+                createdCuenta.estado(),
+                createdCuenta.clienteId()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
@@ -62,7 +60,7 @@ public class CuentaController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllAccounts() {
         List<CuentaResponse> responses = cuentaUseCase.getAllAccounts().stream()
-                .map(c -> new CuentaResponse(c.getId(), c.getNumeroCuenta(), c.getTipoCuenta(), c.getSaldoInicial(), c.getSaldoDisponible(), c.getEstado(), c.getClienteId()))
+                .map(c -> new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(Map.of(
@@ -74,7 +72,7 @@ public class CuentaController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getAccountById(@PathVariable Long id) {
         Cuenta c = cuentaUseCase.getAccountById(id);
-        CuentaResponse response = new CuentaResponse(c.getId(), c.getNumeroCuenta(), c.getTipoCuenta(), c.getSaldoInicial(), c.getSaldoDisponible(), c.getEstado(), c.getClienteId());
+        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
 
         return ResponseEntity.ok(Map.of(
                 "data", response,
@@ -84,12 +82,8 @@ public class CuentaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
-        Cuenta updateData = new Cuenta();
-        updateData.setTipoCuenta(request.tipoCuenta());
-        updateData.setEstado(request.estado());
-
-        Cuenta c = cuentaUseCase.updateAccount(id, updateData);
-        CuentaResponse response = new CuentaResponse(c.getId(), c.getNumeroCuenta(), c.getTipoCuenta(), c.getSaldoInicial(), c.getSaldoDisponible(), c.getEstado(), c.getClienteId());
+        Cuenta c = cuentaUseCase.updateAccount(id, request.tipoCuenta(), request.estado());
+        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
 
         return ResponseEntity.ok(Map.of(
                 "data", response,

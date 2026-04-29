@@ -1,13 +1,13 @@
 package com.bank.bankingservice.domain.ports.in;
 
 import com.bank.bankingservice.domain.model.Cuenta;
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 public interface CuentaUseCase {
-    Cuenta createAccount(Cuenta cuenta);
+    Cuenta createAccount(Long clienteId, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial);
     List<Cuenta> getAllAccounts();
     Cuenta getAccountById(Long id);
-    Cuenta updateAccount(Long id, Cuenta cuenta);
+    Cuenta updateAccount(Long id, String tipoCuenta, Boolean estado);
     void deleteAccount(Long id);
 }

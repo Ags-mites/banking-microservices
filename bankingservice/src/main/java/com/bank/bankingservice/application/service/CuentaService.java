@@ -8,6 +8,7 @@ import com.bank.bankingservice.domain.exception.AccountConflictException;
 import com.bank.bankingservice.domain.exception.AccountNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -19,22 +20,12 @@ public class CuentaService implements CuentaUseCase {
     }
 
     @Override
-    public Cuenta createAccount(Cuenta cuenta) {
-        if (!"Ahorros".equals(cuenta.getTipoCuenta()) && !"Corriente".equals(cuenta.getTipoCuenta())) {
-            throw new AccountValidationException("Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos.");
-        }
-        if (cuenta.getSaldoInicial() != null && cuenta.getSaldoInicial().signum() < 0) {
-            throw new AccountValidationException("El saldo inicial no puede ser negativo.");
-        }
-        if (repository.existsByNumeroCuenta(cuenta.getNumeroCuenta())) {
+    public Cuenta createAccount(Long clienteId, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial) {
+        if (repository.existsByNumeroCuenta(numeroCuenta)) {
             throw new AccountConflictException("El número de cuenta ya existe.");
         }
 
-        if (cuenta.getEstado() == null) {
-            cuenta.setEstado(true);
-        }
-        cuenta.setSaldoDisponible(cuenta.getSaldoInicial());
-
+        Cuenta cuenta = Cuenta.abrir(clienteId, numeroCuenta, tipoCuenta, saldoInicial);
         return repository.save(cuenta);
     }
 
@@ -50,27 +41,16 @@ public class CuentaService implements CuentaUseCase {
     }
 
     @Override
-    public Cuenta updateAccount(Long id, Cuenta cuentaActualizada) {
+    public Cuenta updateAccount(Long id, String tipoCuenta, Boolean estado) {
         Cuenta cuenta = getAccountById(id);
-
-        if (cuentaActualizada.getTipoCuenta() != null) {
-            if (!"Ahorros".equals(cuentaActualizada.getTipoCuenta()) && !"Corriente".equals(cuentaActualizada.getTipoCuenta())) {
-                throw new AccountValidationException("Tipo de cuenta inválido.");
-            }
-            cuenta.setTipoCuenta(cuentaActualizada.getTipoCuenta());
-        }
-
-        if (cuentaActualizada.getEstado() != null) {
-            cuenta.setEstado(cuentaActualizada.getEstado());
-        }
-
+        cuenta.actualizar(tipoCuenta, estado);
         return repository.save(cuenta);
     }
 
     @Override
     public void deleteAccount(Long id) {
         Cuenta cuenta = getAccountById(id);
-        cuenta.setEstado(false);
+        cuenta.inactivar();
         repository.save(cuenta);
     }
 }

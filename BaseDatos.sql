@@ -51,7 +51,10 @@ CREATE TABLE cuenta (
     saldo_inicial DECIMAL(15,2) NOT NULL DEFAULT 0,
     saldo_disponible DECIMAL(15,2) NOT NULL DEFAULT 0,
     estado BOOLEAN DEFAULT true,
-    cliente_id BIGINT NOT NULL
+    cliente_id BIGINT NOT NULL,
+    version INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE movimiento (

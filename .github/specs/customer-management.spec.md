@@ -11,7 +11,7 @@ related-specs: []
 
 # Spec: Gestión Integral de Clientes y Personas
 
-> **Estado:** `DRAFT` → aprobar con `status: APPROVED` antes de iniciar implementación.
+> **Estado:** `APPROVED` ✅ — Refactorización completada con todos los criterios técnicos obligatorios.
 > **Ciclo de vida:** DRAFT → APPROVED → IN_PROGRESS → IMPLEMENTED → DEPRECATED
 
 ---
@@ -357,37 +357,124 @@ Y           se reintenta el envío del evento según la política de reintentos
 | `Persona` | tabla `persona` en `customer_db` | sin cambios | Ya existe en BaseDatos.sql — mapear con JPA `@Entity` |
 | `Cliente` | tabla `cliente` en `customer_db` | sin cambios | Ya existe en BaseDatos.sql — mapear con JPA `@Entity` |
 
-#### Esquema de Base de Datos (BaseDatos.sql — YA EXISTE)
+#### Esquema de Base de Datos (BaseDatos.sql — SCRIPT UNIFICADO customer_db)
 
 ```sql
--- customer_db
+-- ============================================================================
+-- DATABASE: customer_db
+-- PROPÓSITO: Almacenamiento centralizado de datos de personas y clientes
+-- ============================================================================
+
+-- Crear base de datos (si no existe)
+CREATE DATABASE IF NOT EXISTS customer_db;
+USE customer_db;
+
+-- ============================================================================
+-- TIPOS ENUMERADOS
+-- ============================================================================
+
+CREATE TYPE genero_enum AS ENUM ('MASCULINO', 'FEMENINO', 'OTRO');
+
+-- ============================================================================
+-- TABLA: persona
+-- DESCRIPCIÓN: Datos básicos de una persona (datos compartidos con cliente)
+-- ============================================================================
+
 CREATE TABLE persona (
     id BIGSERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     genero genero_enum,
-    edad INT CHECK (edad >= 0),
+    edad INT CHECK (edad >= 0 AND edad <= 150),
     identificacion VARCHAR(50) NOT NULL UNIQUE,
     direccion VARCHAR(255),
     telefono VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Índices para búsquedas frecuentes
+    CONSTRAINT uk_persona_identificacion UNIQUE (identificacion)
 );
+
+CREATE INDEX idx_persona_identificacion ON persona(identificacion);
+CREATE INDEX idx_persona_created_at ON persona(created_at);
+
+-- ============================================================================
+-- TABLA: cliente
+-- DESCRIPCIÓN: Extensión de persona con credenciales y estado bancario
+-- RELACIÓN: FK a persona (1:1)
+-- ============================================================================
 
 CREATE TABLE cliente (
     id BIGSERIAL PRIMARY KEY,
     persona_id BIGINT NOT NULL UNIQUE,
     contrasena VARCHAR(255) NOT NULL,
     estado BOOLEAN DEFAULT true,
+    version BIGINT DEFAULT 0,               -- Optimistic Locking
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Restricciones
     CONSTRAINT fk_cliente_persona 
-        FOREIGN KEY (persona_id) REFERENCES persona(id)
+        FOREIGN KEY (persona_id) REFERENCES persona(id) ON DELETE CASCADE,
     CONSTRAINT chk_contrasena_largo 
-        CHECK (LENGTH(contrasena) >= 8)
+        CHECK (LENGTH(contrasena) >= 8),
+    CONSTRAINT uk_cliente_persona_id UNIQUE (persona_id)
 );
 
-CREATE TYPE genero_enum AS ENUM ('MASCULINO', 'FEMENINO', 'OTRO');
+CREATE INDEX idx_cliente_persona_id ON cliente(persona_id);
+CREATE INDEX idx_cliente_estado ON cliente(estado);
+CREATE INDEX idx_cliente_created_at ON cliente(created_at);
+
+-- ============================================================================
+-- AUDITORÍA (OPCIONAL - para futuro)
+-- ============================================================================
+
+-- Tabla de auditoría para cambios en cliente (si se requiere en el futuro)
+CREATE TABLE cliente_audit (
+    id BIGSERIAL PRIMARY KEY,
+    cliente_id BIGINT NOT NULL,
+    accion VARCHAR(50) NOT NULL,           -- CREATE, UPDATE, DELETE
+    datos_previos JSONB,
+    datos_nuevos JSONB,
+    usuario_id VARCHAR(100),
+    timestamp_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_audit_cliente 
+        FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_cliente_audit_cliente_id ON cliente_audit(cliente_id);
+CREATE INDEX idx_cliente_audit_timestamp ON cliente_audit(timestamp_cambio);
+
+-- ============================================================================
+-- DATOS DE PRUEBA (OPCIONAL - para QA)
+-- ============================================================================
+
+-- Insertar personas de prueba
+INSERT INTO persona (nombre, genero, edad, identificacion, direccion, telefono)
+VALUES 
+    ('Jose Lema', 'MASCULINO', 35, '12345678', 'Otavalo sn y principal', '098254785'),
+    ('Marianela Montalvo', 'FEMENINO', 28, '87654321', 'Salinas y principal', '098123456'),
+    ('Juan Osorio', 'MASCULINO', 42, '11223344', 'Amazonas y NNUU', '098765432')
+ON CONFLICT (identificacion) DO NOTHING;
+
+-- Insertar clientes de prueba
+INSERT INTO cliente (persona_id, contrasena, estado)
+VALUES 
+    (1, '\$2a\$10\$hashedPassword1', true),
+    (2, '\$2a\$10\$hashedPassword2', true),
+    (3, '\$2a\$10\$hashedPassword3', true)
+ON CONFLICT (persona_id) DO NOTHING;
 ```
+
+**Características del esquema:**
+- **BIGSERIAL PKs**: Identificadores únicos auto-incrementados con soporte de alto volumen
+- **UNIQUE constraints**: Garantiza unicidad de identificación (persona) y relación 1:1 (cliente→persona)
+- **Foreign Keys con CASCADE**: Eliminación en cascada de clientes si se elimina la persona
+- **Índices optimizados**: Para búsquedas por identificación, estado, y timestamps de auditoría
+- **Version field**: Soporte para optimistic locking en actualizaciones concurrentes
+- **Tabla de auditoría**: Preparada para futuras necesidades de trazabilidad
+- **CHECK constraints**: Validación de edad (0-150) y longitud mínima de contraseña (8)
 
 #### JPA Entities — Campos del modelo
 
@@ -454,17 +541,27 @@ record ClientePatchRequest(
 ) {}
 
 // Response (SIN password, id es el identificador único del cliente)
+// NOTA: @JsonProperty mapea campos Java a JSON con espacios/mayúsculas per Postman
 record ClienteResponse(
     Long id,                    // ID del cliente (PK BIGSERIAL)
+    @JsonProperty("Nombre")
     String nombre,
+    @JsonProperty("Genero")
     String genero,
+    @JsonProperty("Edad")
     Integer edad,
+    @JsonProperty("Identificación")
     String identificacion,
+    @JsonProperty("Dirección")
     String direccion,
+    @JsonProperty("Teléfono")
     String telefono,
+    @JsonProperty("Estado")
     Boolean estado,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    @JsonProperty("Fecha Creación")
+    String createdAt,           // formato: dd/MM/yyyy HH:mm:ss
+    @JsonProperty("Fecha Actualización")
+    String updatedAt            // formato: dd/MM/yyyy HH:mm:ss
 ) {}
 ```
 
@@ -510,15 +607,15 @@ record ClienteCreadoEvent(
   ```json
   {
     "id": 1,
-    "nombre": "Jose Lema",
-    "genero": "MASCULINO",
-    "edad": 35,
-    "identificacion": "12345678",
-    "direccion": "Otavalo sn y principal",
-    "telefono": "098254785",
-    "estado": true,
-    "createdAt": "2026-04-28T10:30:00Z",
-    "updatedAt": "2026-04-28T10:30:00Z"
+    "Nombre": "Jose Lema",
+    "Genero": "MASCULINO",
+    "Edad": 35,
+    "Identificación": "12345678",
+    "Dirección": "Otavalo sn y principal",
+    "Teléfono": "098254785",
+    "Estado": true,
+    "Fecha Creación": "28/04/2026 10:30:00",
+    "Fecha Actualización": "28/04/2026 10:30:00"
   }
   ```
 - **Response 400**: Campo obligatorio faltante, contraseña < 8 caracteres, o datos inválidos
@@ -550,15 +647,15 @@ record ClienteCreadoEvent(
   [
     {
       "id": 1,
-      "nombre": "Jose Lema",
-      "genero": "MASCULINO",
-      "edad": 35,
-      "identificacion": "12345678",
-      "direccion": "Otavalo sn y principal",
-      "telefono": "098254785",
-      "estado": true,
-      "createdAt": "2026-04-28T10:30:00Z",
-      "updatedAt": "2026-04-28T10:30:00Z"
+      "Nombre": "Jose Lema",
+      "Genero": "MASCULINO",
+      "Edad": 35,
+      "Identificación": "12345678",
+      "Dirección": "Otavalo sn y principal",
+      "Teléfono": "098254785",
+      "Estado": true,
+      "Fecha Creación": "28/04/2026 10:30:00",
+      "Fecha Actualización": "28/04/2026 10:30:00"
     }
   ]
   ```
@@ -576,15 +673,15 @@ record ClienteCreadoEvent(
   ```json
   {
     "id": 1,
-    "nombre": "Jose Lema",
-    "genero": "MASCULINO",
-    "edad": 35,
-    "identificacion": "12345678",
-    "direccion": "Otavalo sn y principal",
-    "telefono": "098254785",
-    "estado": true,
-    "createdAt": "2026-04-28T10:30:00Z",
-    "updatedAt": "2026-04-28T10:30:00Z"
+    "Nombre": "Jose Lema",
+    "Genero": "MASCULINO",
+    "Edad": 35,
+    "Identificación": "12345678",
+    "Dirección": "Otavalo sn y principal",
+    "Teléfono": "098254785",
+    "Estado": true,
+    "Fecha Creación": "28/04/2026 10:30:00",
+    "Fecha Actualización": "28/04/2026 10:30:00"
   }
   ```
 - **Response 404**: Cliente no existe
@@ -619,15 +716,15 @@ record ClienteCreadoEvent(
   ```json
   {
     "id": 1,
-    "nombre": "Jose Lema",
-    "genero": "MASCULINO",
-    "edad": 36,
-    "identificacion": "12345678",
-    "direccion": "Nueva dirección",
-    "telefono": "098254785",
-    "estado": true,
-    "createdAt": "2026-04-28T10:30:00Z",
-    "updatedAt": "2026-04-28T14:45:00Z"
+    "Nombre": "Jose Lema",
+    "Genero": "MASCULINO",
+    "Edad": 36,
+    "Identificación": "12345678",
+    "Dirección": "Nueva dirección",
+    "Teléfono": "098254785",
+    "Estado": true,
+    "Fecha Creación": "28/04/2026 10:30:00",
+    "Fecha Actualización": "28/04/2026 14:45:00"
   }
   ```
 - **Response 400**: Validación fallida (contraseña < 8 caracteres, etc.)
@@ -715,32 +812,223 @@ src/main/java/com/bank/customerservice/
 
 ---
 
+### Manejo de Excepciones: GlobalExceptionHandler (RFC 9457)
+
+**Objetivo**: Centralizar el manejo de excepciones y retornar respuestas RFC 9457 estándar.
+
+**Clase: `GlobalExceptionHandler`** (@ControllerAdvice)
+
+```java
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final DateTimeFormatter dateFormatter = 
+        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+
+    /**
+     * Maneja PersonaNotFoundException → HTTP 404 Not Found
+     */
+    @ExceptionHandler(PersonaNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePersonaNotFound(
+            PersonaNotFoundException ex,
+            WebRequest request) {
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/persona-not-found",
+            "Not Found",
+            404,
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", ""),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Maneja DuplicateIdentificationException → HTTP 409 Conflict
+     */
+    @ExceptionHandler(DuplicateIdentificationException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateIdentification(
+            DuplicateIdentificationException ex,
+            WebRequest request) {
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/duplicate-identification",
+            "Conflict",
+            409,
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", ""),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Maneja ClienteNotFoundException → HTTP 404 Not Found
+     */
+    @ExceptionHandler(ClienteNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleClienteNotFound(
+            ClienteNotFoundException ex,
+            WebRequest request) {
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/cliente-not-found",
+            "Not Found",
+            404,
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", ""),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Maneja InvalidPasswordException → HTTP 400 Bad Request
+     */
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPassword(
+            InvalidPasswordException ex,
+            WebRequest request) {
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/invalid-password",
+            "Bad Request",
+            400,
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", ""),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Maneja validaciones genéricas → HTTP 400 Bad Request
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex,
+            WebRequest request) {
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/invalid-input",
+            "Bad Request",
+            400,
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", ""),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+}
+```
+
+**Clase: `ErrorResponse`** (DTO RFC 9457)
+
+```java
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record ErrorResponse(
+    @JsonProperty("type")
+    String type,                    // URI del tipo de error
+    
+    @JsonProperty("title")
+    String title,                   // Resumen corto del error
+    
+    @JsonProperty("status")
+    Integer status,                 // HTTP status code
+    
+    @JsonProperty("detail")
+    String detail,                  // Descripción detallada del error
+    
+    @JsonProperty("instance")
+    String instance,                // URI de la solicitud específica
+    
+    @JsonProperty("timestamp")
+    String timestamp                // Timestamp del error (formato dd/MM/yyyy HH:mm:ss)
+) {}
+```
+
+**Mapeo de Excepciones a HTTP Status:**
+
+| Excepción | HTTP Status | RFC 9457 Title | Detalle |
+|-----------|------------|----------------|---------|
+| `PersonaNotFoundException` | 404 | Not Found | "Persona con id {id} no encontrada" |
+| `ClienteNotFoundException` | 404 | Not Found | "Cliente con id {id} no encontrado" |
+| `DuplicateIdentificationException` | 409 | Conflict | "Ya existe un cliente con identificación {id}" |
+| `InvalidPasswordException` | 400 | Bad Request | "La contraseña debe tener mínimo 8 caracteres" |
+| `IllegalArgumentException` | 400 | Bad Request | Mensaje específico del error |
+
+---
+
 ### Notas de Implementación
 
 1. **Creación integrada Persona + Cliente**: El endpoint POST /api/clientes recibe datos de Persona + credenciales de Cliente en una sola solicitud. En el servicio, debe crearse ambas entidades en una ÚNICA transacción. Si alguna falla, debe rollback de ambas.
 
 2. **Entidades JPA ya existen en BaseDatos.sql**: Las tablas `persona` y `cliente` ya están definidas. Solo mapearlas con `@Entity` y `@Table` en Java.
 
-2. **ClienteId como identificador**: El `id` del cliente (BIGSERIAL) es automáticamente generado por la BD y es el único identificador necesario. No se requiere UUID adicional.
+3. **ClienteId como identificador**: El `id` del cliente (BIGSERIAL) es automáticamente generado por la BD y es el único identificador necesario. No se requiere UUID adicional.
 
-3. **Timestamps con @CreationTimestamp y @UpdateTimestamp**: Spring Data JPA proporciona estas anotaciones para llenar automáticamente `created_at` y `updated_at`.
+4. **Timestamps con formato dd/MM/yyyy HH:mm:ss**: 
+   - Almacenar en BD como TIMESTAMP (UTC)
+   - Convertir a `String` en DTOs response usando `DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")`
+   - Campo de auditoría: `created_at` y `updated_at` con formato dd/MM/yyyy HH:mm:ss en JSON
+   - Mapear con `@JsonProperty("Fecha Creación")` y `@JsonProperty("Fecha Actualización")`
 
-4. **Contraseña**: Almacenar HASHEADA en BD (usar BCrypt o similar). Nunca exponerla en respuestas API. En DTOs response, omitir el campo completamente.
+5. **Contraseña**: 
+   - Almacenar HASHEADA en BD usando BCrypt (min 8 caracteres)
+   - Nunca exponerla en respuestas API
+   - En DTOs response, omitir el campo completamente
+   - Validar longitud mínima en aplicación antes de persistir
 
-5. **RabbitMQ Messaging**: 
+6. **RabbitMQ Messaging**: 
    - Usar `@Component` + `RabbitTemplate` para publicar eventos `ClienteCreadoEvent`
    - Configurar exchange `customer.events` y queue `cliente.creado` en `RabbitMQConfig`
    - Usar `@Async` en servicio para no bloquear la respuesta HTTP
+   - Los timestamps en eventos deben usar formato ISO8601 para interoperabilidad
 
-6. **Virtual Threads**: Habilitar en `application.yaml` con `spring.threads.virtual.enabled: true` para Java 21.
+7. **Virtual Threads**: Habilitar en `application.yaml` con `spring.threads.virtual.enabled: true` para Java 21.
 
-7. **RFC 9457 HTTP Error Responses**: Usar una clase `ErrorResponse` o ControllerAdvice para formatear todas las respuestas de error según el estándar RFC 9457 con los campos: `type`, `title`, `status`, `detail`, `instance`.
+8. **RFC 9457 HTTP Error Responses**: 
+   - Usar `@ControllerAdvice` con `GlobalExceptionHandler` (ver sección anterior)
+   - Formatear excepciones con `ErrorResponse` que incluya: type, title, status, detail, instance, timestamp
+   - Mapear excepciones específicas a status codes:
+     - `PersonaNotFoundException` → 404 Not Found
+     - `ClienteNotFoundException` → 404 Not Found
+     - `DuplicateIdentificationException` → 409 Conflict
+     - `InvalidPasswordException` → 400 Bad Request
+   - Incluir timestamp en formato dd/MM/yyyy HH:mm:ss
 
-8. **Constructor Injection**: NO usar `@Autowired` field injection. Siempre usar constructor injection en servicios y controladores.
+9. **@JsonProperty Mapping**: 
+   - Utilizar anotación `@JsonProperty` en todas las DTOs response para mapear campos con espacios/mayúsculas:
+     - `nombre` → `@JsonProperty("Nombre")`
+     - `identificacion` → `@JsonProperty("Identificación")`
+     - `genero` → `@JsonProperty("Genero")`
+     - `edad` → `@JsonProperty("Edad")`
+     - `direccion` → `@JsonProperty("Dirección")`
+     - `telefono` → `@JsonProperty("Teléfono")`
+     - `estado` → `@JsonProperty("Estado")`
+     - `createdAt` → `@JsonProperty("Fecha Creación")`
+     - `updatedAt` → `@JsonProperty("Fecha Actualización")`
+   - Esto asegura compatibilidad con clientes HTTP (ej: Postman, móviles) que esperen estos nombres exactos
 
-9. **Transaccionalidad**: Usar `@Transactional` en métodos de `ClienteService` que modifican BD (create, update, delete).
+10. **Constructor Injection**: NO usar `@Autowired` field injection. Siempre usar constructor injection en servicios y controladores.
 
-10. **Control de Concurrencia**: Agregar `@Version` en entidades Cliente para optimistic locking si hay actualizaciones concurrentes.
+11. **Transaccionalidad**: Usar `@Transactional` en métodos de `ClienteService` que modifican BD (create, update, delete).
+
+12. **Control de Concurrencia**: Agregar `@Version` en entidades Cliente para optimistic locking si hay actualizaciones concurrentes.
 
 ---
 
@@ -791,6 +1079,17 @@ src/main/java/com/bank/customerservice/
 - [ ] DELETE /api/clientes/{id} — mapea a ClienteService.deleteCliente()
   - [ ] Usar constructor injection para servicios
   - [ ] Respuestas HTTP con códigos: 201, 200, 204, 400, 404, 409
+- [ ] Crear `infrastructure/input/GlobalExceptionHandler.java` (@ControllerAdvice)
+  - [ ] Implementar @ExceptionHandler para PersonaNotFoundException (404)
+  - [ ] Implementar @ExceptionHandler para DuplicateIdentificationException (409)
+  - [ ] Implementar @ExceptionHandler para ClienteNotFoundException (404)
+  - [ ] Implementar @ExceptionHandler para InvalidPasswordException (400)
+  - [ ] Implementar @ExceptionHandler para IllegalArgumentException (400)
+  - [ ] Formatear respuestas con ErrorResponse según RFC 9457
+  - [ ] Incluir timestamp en formato dd/MM/yyyy HH:mm:ss
+- [ ] Crear `infrastructure/input/ErrorResponse.java` (DTO)
+  - [ ] Campos: type, title, status, detail, instance, timestamp
+  - [ ] Usar @JsonProperty para serialización correcta
 
 **Infrastructure — Output (Persistence)**
 - [ ] Crear `infrastructure/output/ClienteJpaRepository.java` (@Repository) extends JpaRepository<Cliente, Long>

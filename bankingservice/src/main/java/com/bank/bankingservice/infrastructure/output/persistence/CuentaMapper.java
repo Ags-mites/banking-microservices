@@ -3,6 +3,10 @@ package com.bank.bankingservice.infrastructure.output.persistence;
 import com.bank.bankingservice.domain.model.Cuenta;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 @Component
 public class CuentaMapper {
     public CuentaEntity toEntity(Cuenta cuenta) {
@@ -10,13 +14,20 @@ public class CuentaMapper {
             return null;
         }
         CuentaEntity entity = new CuentaEntity();
-        entity.setId(cuenta.getId());
-        entity.setNumeroCuenta(cuenta.getNumeroCuenta());
-        entity.setTipoCuenta(cuenta.getTipoCuenta());
-        entity.setSaldoInicial(cuenta.getSaldoInicial());
-        entity.setSaldoDisponible(cuenta.getSaldoDisponible());
-        entity.setEstado(cuenta.getEstado());
-        entity.setClienteId(cuenta.getClienteId());
+        entity.setId(cuenta.id());
+        entity.setNumeroCuenta(cuenta.numeroCuenta());
+        entity.setTipoCuenta(cuenta.tipoCuenta());
+        entity.setSaldoInicial(cuenta.saldoInicial());
+        entity.setSaldoDisponible(cuenta.saldoDisponible());
+        entity.setEstado(cuenta.estado());
+        entity.setClienteId(cuenta.clienteId());
+        entity.setVersion(cuenta.version());
+        if (cuenta.createdAt() != null) {
+            entity.setCreatedAt(LocalDateTime.ofInstant(cuenta.createdAt(), ZoneOffset.UTC));
+        }
+        if (cuenta.updatedAt() != null) {
+            entity.setUpdatedAt(LocalDateTime.ofInstant(cuenta.updatedAt(), ZoneOffset.UTC));
+        }
         return entity;
     }
 
@@ -24,14 +35,20 @@ public class CuentaMapper {
         if (entity == null) {
             return null;
         }
-        Cuenta cuenta = new Cuenta();
-        cuenta.setId(entity.getId());
-        cuenta.setNumeroCuenta(entity.getNumeroCuenta());
-        cuenta.setTipoCuenta(entity.getTipoCuenta());
-        cuenta.setSaldoInicial(entity.getSaldoInicial());
-        cuenta.setSaldoDisponible(entity.getSaldoDisponible());
-        cuenta.setEstado(entity.getEstado());
-        cuenta.setClienteId(entity.getClienteId());
-        return cuenta;
+        Instant createdAt = entity.getCreatedAt() != null ? entity.getCreatedAt().toInstant(ZoneOffset.UTC) : null;
+        Instant updatedAt = entity.getUpdatedAt() != null ? entity.getUpdatedAt().toInstant(ZoneOffset.UTC) : null;
+
+        return Cuenta.reconstituir(
+                entity.getId(),
+                entity.getNumeroCuenta(),
+                entity.getTipoCuenta(),
+                entity.getSaldoInicial(),
+                entity.getSaldoDisponible(),
+                entity.getEstado(),
+                entity.getClienteId(),
+                entity.getVersion(),
+                createdAt,
+                updatedAt
+        );
     }
 }
