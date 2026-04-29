@@ -20,9 +20,9 @@ CREATE TABLE persona (
     edad INT CHECK (edad >= 0),
     identificacion VARCHAR(50) NOT NULL UNIQUE,
     direccion VARCHAR(255),
-    telefono VARCHAR(20)
+    telefono VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE cliente (
@@ -30,11 +30,12 @@ CREATE TABLE cliente (
     persona_id BIGINT NOT NULL UNIQUE,
     contrasena VARCHAR(255) NOT NULL,
     estado BOOLEAN DEFAULT true,
+    version INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_cliente_persona 
-        FOREIGN KEY (persona_id) REFERENCES persona(id)
-    CONSTRAINT chk_contrasena_largo 
+    CONSTRAINT fk_cliente_persona
+        FOREIGN KEY (persona_id) REFERENCES persona(id),
+    CONSTRAINT chk_contrasena_largo
         CHECK (LENGTH(contrasena) >= 8)
 );
 
