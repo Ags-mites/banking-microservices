@@ -48,8 +48,13 @@ public class ClienteRepositoryAdapter implements ClienteRepository {
     
     @Override
     public Cliente actualizar(Cliente cliente) {
-        ClienteEntity entity = toEntity(cliente);
-        ClienteEntity actualizado = jpaRepository.save(entity);
+        ClienteEntity existente = jpaRepository.findById(cliente.id())
+            .orElseThrow(() -> new RuntimeException("Cliente no encontrado con id: " + cliente.id()));
+        
+        existente.setContrasena(cliente.contrasena());
+        existente.setEstado(cliente.estado());
+        
+        ClienteEntity actualizado = jpaRepository.save(existente);
         return toDomain(actualizado);
     }
     

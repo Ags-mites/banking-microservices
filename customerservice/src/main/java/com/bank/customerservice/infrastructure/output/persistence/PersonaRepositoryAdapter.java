@@ -45,8 +45,17 @@ public class PersonaRepositoryAdapter implements PersonaRepository {
     
     @Override
     public Persona actualizar(Persona persona) {
-        PersonaEntity entity = toEntity(persona);
-        PersonaEntity actualizada = jpaRepository.save(entity);
+        PersonaEntity existente = jpaRepository.findById(persona.id())
+            .orElseThrow(() -> new RuntimeException("Persona no encontrada con id: " + persona.id()));
+        
+        existente.setNombre(persona.nombre());
+        existente.setGenero(persona.genero());
+        existente.setEdad(persona.edad());
+        existente.setIdentificacion(persona.identificacion());
+        existente.setDireccion(persona.direccion());
+        existente.setTelefono(persona.telefono());
+        
+        PersonaEntity actualizada = jpaRepository.save(existente);
         return toDomain(actualizada);
     }
     

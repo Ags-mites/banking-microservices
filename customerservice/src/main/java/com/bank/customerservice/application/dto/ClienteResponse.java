@@ -1,16 +1,34 @@
 package com.bank.customerservice.application.dto;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record ClienteResponse(
     Long id,
+    
+    @JsonProperty("Nombre")
     String nombre,
+    
+    @JsonProperty("Genero")
     String genero,
+    
+    @JsonProperty("Edad")
     Integer edad,
+    
+    @JsonProperty("Identificación")
     String identificacion,
+    
+    @JsonProperty("Dirección")
     String direccion,
+    
+    @JsonProperty("Teléfono")
     String telefono,
+    
+    @JsonProperty("Estado")
     Boolean estado,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    
+    @JsonProperty("Fecha Creación")
+    String createdAt,
+    
+    @JsonProperty("Fecha Actualización")
+    String updatedAt
 ) {}

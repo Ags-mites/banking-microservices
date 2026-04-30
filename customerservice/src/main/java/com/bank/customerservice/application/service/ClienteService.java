@@ -2,6 +2,7 @@ package com.bank.customerservice.application.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,9 @@ import com.bank.customerservice.infrastructure.messaging.ClienteEventPublisher;
 @Service
 @Transactional
 public class ClienteService implements ClienteUseCase {
+    
+    private static final DateTimeFormatter DATE_FORMATTER = 
+        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     
     private final ClienteRepository clienteRepository;
     private final PersonaRepository personaRepository;
@@ -192,14 +196,17 @@ public class ClienteService implements ClienteUseCase {
     private ClienteResponse toClienteResponse(Cliente cliente, Persona persona) {
         String generoStr = persona.genero() != null ? persona.genero().toString() : null;
         
-        LocalDateTime createdAt = LocalDateTime.ofInstant(
+        LocalDateTime createdAtDateTime = LocalDateTime.ofInstant(
             cliente.createdAt(),
             ZoneId.of("UTC")
         );
-        LocalDateTime updatedAt = LocalDateTime.ofInstant(
+        LocalDateTime updatedAtDateTime = LocalDateTime.ofInstant(
             cliente.updatedAt(),
             ZoneId.of("UTC")
         );
+        
+        String createdAtFormatted = createdAtDateTime.format(DATE_FORMATTER);
+        String updatedAtFormatted = updatedAtDateTime.format(DATE_FORMATTER);
         
         return new ClienteResponse(
             cliente.id(),
@@ -210,8 +217,8 @@ public class ClienteService implements ClienteUseCase {
             persona.direccion(),
             persona.telefono(),
             cliente.estado(),
-            createdAt,
-            updatedAt
+            createdAtFormatted,
+            updatedAtFormatted
         );
     }
 }
