@@ -262,4 +262,23 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllExceptions(
+            Exception ex,
+            WebRequest request) {
+        
+        ex.printStackTrace(); 
+        
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/internal-server-error",
+            "Internal Server Error",
+            500,
+            "Exception: " + ex.getClass().getName() + " - " + ex.getMessage(),
+            extractPath(request),
+            LocalDateTime.now().format(dateFormatter)
+        );
+        
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }

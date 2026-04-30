@@ -9,11 +9,17 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import jakarta.persistence.EntityManager;
 
 @Component
 public class MovimientoMapper {
 
+    private final EntityManager entityManager;
     private static final DateTimeFormatter LIST_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public MovimientoMapper(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
 
     public MovimientoEntity toEntity(Movimiento movimiento) {
         if (movimiento == null) {
@@ -29,8 +35,7 @@ public class MovimientoMapper {
         entity.setValor(movimiento.valor());
         entity.setSaldo(movimiento.saldo());
 
-        CuentaEntity cuenta = new CuentaEntity();
-        cuenta.setId(movimiento.cuentaId());
+        CuentaEntity cuenta = entityManager.getReference(CuentaEntity.class, movimiento.cuentaId());
         entity.setCuenta(cuenta);
         return entity;
     }

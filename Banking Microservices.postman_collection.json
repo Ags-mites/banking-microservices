@@ -1,0 +1,435 @@
+{
+  "info": {
+    "_postman_id": "bf8cbcec-65cd-4b5b-9762-98b7bff985db",
+    "name": "Banking Microservices",
+    "description": "Colección de endpoints para Customer Service, Banking Service y Movimientos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "11616799"
+  },
+  "item": [
+    {
+      "name": "Customer Service",
+      "item": [
+        {
+          "name": "POST - Crear Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Perez\",\n  \"genero\": \"M\",\n  \"edad\": 30,\n  \"identificacion\": \"1234567890\",\n  \"direccion\": \"Calle 123, Ciudad\",\n  \"telefono\": \"+1234567890\",\n  \"contrasena\": \"password123\",\n  \"estado\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Obtener Todos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Obtener por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes/1",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT - Actualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Perez Actualizado\",\n  \"genero\": \"MASCULINO\",\n  \"edad\": 31,\n  \"identificacion\": \"1234567890\",\n  \"direccion\": \"Nueva Direccion\",\n  \"telefono\": \"+0987654321\",\n  \"contrasena\": \"newpass\",\n  \"estado\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes/1",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH - Actualizar Parcial",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Actualizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes/1",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE - Eliminar Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlCustomer}}/api/clientes/1",
+              "host": [
+                "{{baseUrlCustomer}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Banking Service",
+      "item": [
+        {
+          "name": "POST - Crear Cuenta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroCuenta\": \"ACC-001\",\n  \"tipoCuenta\": \"Ahorros\",\n  \"saldoInicial\": 1000.00,\n  \"estado\": true,\n  \"clienteId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Obtener Todas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Obtener por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas/1",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT - Actualizar Cuenta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoCuenta\": \"Corriente\",\n  \"estado\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas/1",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH - Actualizar Parcial",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas/1",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE - Eliminar Cuenta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/cuentas/1",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "cuentas",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST - Registrar Deposito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuentaId\": 1,\n  \"tipo\": \"Depósito\",\n  \"valor\": 500.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/movimientos",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST - Registrar Retiro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuentaId\": 1,\n  \"tipo\": \"RETIRO\",\n  \"valor\": 200.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/movimientos",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Listar Movimientos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/movimientos?cuentaId=1&offset=0&limit=50",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ],
+              "query": [
+                {
+                  "key": "cuentaId",
+                  "value": "1"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Movimientos por Fecha",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrlBanking}}/api/movimientos?cuentaId=1&from=2024-01-01&to=2024-12-31&offset=0&limit=50",
+              "host": [
+                "{{baseUrlBanking}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ],
+              "query": [
+                {
+                  "key": "cuentaId",
+                  "value": "1"
+                },
+                {
+                  "key": "from",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrlCustomer",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "baseUrlBanking",
+      "value": "http://localhost:8080"
+    }
+  ]
+}
