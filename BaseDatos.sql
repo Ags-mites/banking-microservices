@@ -49,7 +49,9 @@ CREATE TABLE cuenta (
     numero_cuenta VARCHAR(20) NOT NULL UNIQUE,
     tipo_cuenta VARCHAR(20) NOT NULL,
     saldo_inicial DECIMAL(15,2) NOT NULL DEFAULT 0,
+    saldo_disponible DECIMAL(15,2) NOT NULL DEFAULT 0,
     estado BOOLEAN DEFAULT true,
+    version INTEGER NOT NULL DEFAULT 0,
     cliente_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -64,3 +66,9 @@ CREATE TABLE movimiento (
     cuenta_id BIGINT NOT NULL,
     CONSTRAINT fk_movimiento_cuenta FOREIGN KEY (cuenta_id) REFERENCES cuenta(id)
 );
+
+CREATE INDEX idx_movimiento_cuenta_fecha ON movimiento (cuenta_id, fecha DESC);
+
+ALTER TABLE movimiento ADD CONSTRAINT chk_movimiento_valor_no_cero CHECK (valor <> 0);
+
+ALTER TABLE movimiento ADD CONSTRAINT chk_movimiento_tipo_valido CHECK (tipo_movimiento IN ('Depósito', 'Retiro'));

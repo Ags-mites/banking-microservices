@@ -9,6 +9,7 @@ public class Cuenta {
     private String numeroCuenta;
     private String tipoCuenta;
     private BigDecimal saldoInicial;
+    private BigDecimal saldoDisponible;
     private Boolean estado;
     private Long clienteId;
     private Instant createdAt;
@@ -27,6 +28,7 @@ public class Cuenta {
         cuenta.numeroCuenta = numeroCuenta;
         cuenta.tipoCuenta = tipoCuenta;
         cuenta.saldoInicial = saldoInicial;
+        cuenta.saldoDisponible = saldoInicial;
         cuenta.estado = true;
         cuenta.createdAt = Instant.now();
         cuenta.updatedAt = Instant.now();
@@ -34,6 +36,7 @@ public class Cuenta {
     }
 
     public static Cuenta reconstituir(Long id, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial,
+                                      BigDecimal saldoDisponible,
                                       Boolean estado, Long clienteId,
                                       Instant createdAt, Instant updatedAt) {
         Cuenta cuenta = new Cuenta();
@@ -41,6 +44,7 @@ public class Cuenta {
         cuenta.numeroCuenta = numeroCuenta;
         cuenta.tipoCuenta = tipoCuenta;
         cuenta.saldoInicial = saldoInicial;
+        cuenta.saldoDisponible = saldoDisponible;
         cuenta.estado = estado;
         cuenta.clienteId = clienteId;
         cuenta.createdAt = createdAt;
@@ -61,6 +65,12 @@ public class Cuenta {
 
     public void inactivar() {
         this.estado = false;
+        this.updatedAt = Instant.now();
+    }
+
+    public void actualizarSaldoDisponible(BigDecimal saldoDisponible) {
+        validarSaldo(saldoDisponible);
+        this.saldoDisponible = saldoDisponible;
         this.updatedAt = Instant.now();
     }
 
@@ -90,6 +100,7 @@ public class Cuenta {
     public String numeroCuenta() { return numeroCuenta; }
     public String tipoCuenta() { return tipoCuenta; }
     public BigDecimal saldoInicial() { return saldoInicial; }
+    public BigDecimal saldoDisponible() { return saldoDisponible; }
     public Boolean estado() { return estado; }
     public Long clienteId() { return clienteId; }
     public Instant createdAt() { return createdAt; }

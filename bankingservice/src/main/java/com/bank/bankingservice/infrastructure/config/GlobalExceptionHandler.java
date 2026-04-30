@@ -3,6 +3,8 @@ package com.bank.bankingservice.infrastructure.config;
 import com.bank.bankingservice.domain.exception.AccountConflictException;
 import com.bank.bankingservice.domain.exception.AccountNotFoundException;
 import com.bank.bankingservice.domain.exception.AccountValidationException;
+import com.bank.bankingservice.domain.exception.InsufficientFundsException;
+import com.bank.bankingservice.domain.exception.MovimientoValidationException;
 import com.bank.bankingservice.infrastructure.input.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -109,6 +111,40 @@ public class GlobalExceptionHandler {
         );
         
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MovimientoValidationException.class)
+    public ResponseEntity<ErrorResponse> handleMovimientoValidation(
+            MovimientoValidationException ex,
+            WebRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/movement-validation",
+            "Bad Request",
+            400,
+            ex.getMessage(),
+            extractPath(request),
+            LocalDateTime.now().format(dateFormatter)
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientFunds(
+            InsufficientFundsException ex,
+            WebRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/insufficient-funds",
+            "Conflict",
+            409,
+            ex.getMessage(),
+            extractPath(request),
+            LocalDateTime.now().format(dateFormatter)
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
     
     @ExceptionHandler(IllegalArgumentException.class)

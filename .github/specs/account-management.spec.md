@@ -803,15 +803,15 @@ spring:
 - [x] Crear modelo de dominio `Cuenta` — Java PURO con métodos factory (abrir, reconstituir)
 - [x] Implementar `CuentaUseCase` (interfaz) — puertos de entrada
 - [x] Implementar `CuentaRepository` (interfaz) — puertos de salida (persistencia)
-- [ ] Implementar `ClientVerifier` (interfaz) — puerto de salida (validación de cliente)
+- [x] Implementar `ClientVerifier` (interfaz) — puerto de salida (validación de cliente)
 - [x] Implementar `CuentaService` — lógica de negocio (crearCuenta, obtenerCuenta, actualizarCuenta, eliminarCuenta)
-- [ ] Actualizar `CuentaService.createAccount()` — integrar validación de cliente via ClientVerifier
-- [x] Implementar `CuentaController` (/api/cuentas) — endpoints CRUD con ResponseEntity y envelope JSON
+- [x] Actualizar `CuentaService.createAccount()` — integrar validación de cliente via ClientVerifier
+- [x] Implementar `CuentaController` (/api/cuentas) — endpoints CRUD con ResponseEntity y DTOs
 - [x] Crear DTOs: `CuentaCreateRequest`, `CuentaUpdateRequest`, `CuentaResponse`
 - [x] Implementar excepciones de dominio: `AccountValidationException`, `AccountConflictException`, `AccountNotFoundException`
-- [x] Mapear JPA `CuentaDocument` (entidad) a tabla `cuenta`
+- [x] Mapear JPA `CuentaEntity` a tabla `cuenta`
 - [x] Implementar adaptador JPA `CuentaRepositoryAdapter`
-- [ ] Implementar adaptador REST `ClientVerifierAdapter` — llamada a customerservice
+- [x] Implementar adaptador REST `CustomerRestClient` — llamada a customerservice
 - [ ] Configurar `application.yaml` — Virtual Threads: `spring.threads.virtual.enabled: true`
 
 #### Tests Backend (Matriz 3-2-1)

@@ -18,6 +18,7 @@ public class CuentaMapper {
         entity.setNumeroCuenta(cuenta.numeroCuenta());
         entity.setTipoCuenta(cuenta.tipoCuenta());
         entity.setSaldoInicial(cuenta.saldoInicial());
+        entity.setSaldoDisponible(cuenta.saldoDisponible());
         entity.setEstado(cuenta.estado());
         entity.setClienteId(cuenta.clienteId());
         if (cuenta.createdAt() != null) {
@@ -41,6 +42,7 @@ public class CuentaMapper {
                 entity.getNumeroCuenta(),
                 entity.getTipoCuenta(),
                 entity.getSaldoInicial(),
+            entity.getSaldoDisponible() != null ? entity.getSaldoDisponible() : entity.getSaldoInicial(),
                 entity.getEstado(),
                 entity.getClienteId(),
                 createdAt,
