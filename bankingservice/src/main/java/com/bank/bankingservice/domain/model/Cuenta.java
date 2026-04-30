@@ -14,6 +14,7 @@ public class Cuenta {
     private Long clienteId;
     private Instant createdAt;
     private Instant updatedAt;
+    private Integer version;
 
     private Cuenta() {
     }
@@ -32,13 +33,14 @@ public class Cuenta {
         cuenta.estado = true;
         cuenta.createdAt = Instant.now();
         cuenta.updatedAt = Instant.now();
+        cuenta.version = 0;
         return cuenta;
     }
 
     public static Cuenta reconstituir(Long id, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial,
                                       BigDecimal saldoDisponible,
                                       Boolean estado, Long clienteId,
-                                      Instant createdAt, Instant updatedAt) {
+                                      Instant createdAt, Instant updatedAt, Integer version) {
         Cuenta cuenta = new Cuenta();
         cuenta.id = id;
         cuenta.numeroCuenta = numeroCuenta;
@@ -49,6 +51,7 @@ public class Cuenta {
         cuenta.clienteId = clienteId;
         cuenta.createdAt = createdAt;
         cuenta.updatedAt = updatedAt;
+        cuenta.version = version;
         return cuenta;
     }
 
@@ -105,10 +108,12 @@ public class Cuenta {
     public Long clienteId() { return clienteId; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
+    public Integer version() { return version; }
 
     // ─── Setters (para infraestructura/persistencia) ────────────────────
 
     public void setId(Long id) { this.id = id; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public void setVersion(Integer version) { this.version = version; }
 }

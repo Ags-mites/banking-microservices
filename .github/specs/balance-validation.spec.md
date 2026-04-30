@@ -19,7 +19,7 @@ related-specs: []
 ## 1. REQUERIMIENTOS
 
 ### Descripción
-El sistema valida que una cuenta tenga saldo suficiente antes de procesar un retiro. La validación ocurre en la capa de dominio, no en el controller ni en el repositorio. Para evitar sobregiros en operaciones concurrentes, se implementa bloqueo optimista usando el campo `@Version` en la entidad `Cuenta`.
+El sistema valida que una cuenta tenga saldo suficiente antes de procesar un retiro. La validación ocurre exclusivamente en la capa de dominio mediante `Cuenta.retirar()`, no en el controller ni en el repositorio. Para evitar sobregiros en operaciones concurrentes, se implementa bloqueo optimista usando el campo `@Version` en la entidad `Cuenta`. El flujo de retiro debe ejecutarse con Virtual Threads en Java 21 y soportar idempotencia cuando se proporcione `transactionId`.
 
 ### Requerimiento de Negocio
 Como sistema de seguridad, quiero validar fondos antes de un retiro, para evitar sobregiros.
@@ -62,16 +62,16 @@ Y           se lanza una excepción personalizada
 ```gherkin
 Dado que:   una cuenta tiene saldo insuficiente
 Cuando:     intento realizar un retiro que excede el saldo disponible
-Entonces:   el sistema lanza InsufficientBalanceException
+Entonces:   el sistema lanza InsufficientFundsException
 Y           el mensaje de error es "Saldo no disponible"
-Y           la respuesta HTTP es 409 (Conflict)
+Y           GlobalExceptionHandler la convierte en HTTP 409 (Conflict)
 ```
 
 **Criterio 1.4: Validación en dominio, no en controller**
 ```gherkin
 Dado que:   una solicitud de retiro llega al controller
 Cuando:     el controller llama al servicio de dominio (use case)
-Entonces:   la validación de saldo se ejecuta EN la capa domain (método de Cuenta)
+Entonces:   la validación de saldo se ejecuta únicamente en Cuenta.retirar()
 Y           el controller NO contiene lógica de validación de saldo
 ```
 
@@ -123,11 +123,13 @@ Y           la transacción se revierte completamente
 ### Reglas de Negocio
 
 1. **RN-001**: El saldo disponible de una cuenta nunca puede ser negativo tras un retiro.
-2. **RN-002**: La validación de saldo ocurre en la capa de dominio (`Cuenta.retirar()` o equivalente), antes de persistir.
+2. **RN-002**: La validación de saldo ocurre únicamente en `Cuenta.retirar()`, antes de persistir.
 3. **RN-003**: El repositorio NO valida saldo, solo ejecuta persistencia si el dominio lo autoriza.
 4. **RN-004**: Cada actualización de `Cuenta` incrementa el campo `@Version` automáticamente (JPA Optimistic Locking).
-5. **RN-005**: Las excepciones de dominio (`InsufficientBalanceException`, `OptimisticLockException`) se mapean a HTTP 409.
-6. **RN-006**: El controller responde con RFC 9457 + envelope JSON en caso de error.
+5. **RN-005**: `InsufficientFundsException` y los conflictos de concurrencia se mapean a HTTP 409.
+6. **RN-006**: El procesamiento de retiros debe ejecutarse con `spring.threads.virtual.enabled=true` para aprovechar Virtual Threads en Java 21.
+7. **RN-007**: Si se provee `transactionId`, el sistema debe evitar duplicidad de movimientos para garantizar idempotencia.
+8. **RN-008**: El controller responde con RFC 9457 + envelope JSON en caso de error.
 
 ---
 
@@ -140,7 +142,7 @@ Y           la transacción se revierte completamente
 | Entidad | Almacén | Cambios | Descripción |
 |---------|---------|---------|-------------|
 | `Cuenta` | tabla `cuenta` | Modificada — agregar método de retiro | Entidad de dominio — modelo principal de negocio |
-| `Movimiento` | tabla `movimiento` | Nueva — se crea con cada retiro/depósito | Registro transaccional del cambio de saldo |
+| `Movimiento` | tabla `movimiento` | Modificada — agrega `transactionId` opcional | Registro transaccional del cambio de saldo |
 
 #### Campos del Modelo — Cuenta
 
@@ -162,6 +164,7 @@ Y           la transacción se revierte completamente
 | Campo | Tipo | Obligatorio | Validación | Descripción |
 |-------|------|-------------|------------|-------------|
 | `id` | Long | sí | auto-generado | Identificador único |
+| `transactionId` | String | no | único cuando se informa | Identificador externo para idempotencia |
 | `tipoMovimiento` | String | sí | enum: DEPOSITO, RETIRO | Tipo de transacción |
 | `valor` | BigDecimal | sí | > 0 | Monto de la operación (siempre positivo) |
 | `saldo` | BigDecimal | sí | >= 0 | Saldo resultante post-movimiento |
@@ -170,21 +173,22 @@ Y           la transacción se revierte completamente
 
 #### Cambios en BaseDatos.sql
 
-**NOTA**: La tabla `cuenta` ya tiene el campo `version`. No hay cambios requeridos en el schema.
+**NOTA**: La tabla `cuenta` ya tiene el campo `version`. Para idempotencia, la tabla `movimiento` debe incorporar `transaction_id`.
 
 ```sql
--- Ya existe en BaseDatos.sql:
--- CREATE TABLE cuenta (
---     ...
---     version INTEGER DEFAULT 0,
---     ...
--- );
+ALTER TABLE movimiento
+  ADD COLUMN transaction_id VARCHAR(100);
+
+CREATE UNIQUE INDEX uq_movimiento_transaction_id
+  ON movimiento(transaction_id)
+  WHERE transaction_id IS NOT NULL;
 ```
 
 #### Índices / Constraints
 
 - Indice existente en `cuenta(numero_cuenta)` — para búsquedas rápidas por número.
 - FK en `movimiento(cuenta_id)` → `cuenta(id)` — asegurar referencial.
+- `movimiento(transaction_id)` UNIQUE cuando se informa — evita duplicidad de movimientos.
 
 ### API Endpoints
 
@@ -200,7 +204,8 @@ Y           la transacción se revierte completamente
 ```json
 {
   "amount": 300.00,
-  "description": "Retiro en cajero automático" // opcional
+  "description": "Retiro en cajero automático", // opcional
+  "transactionId": "trx-20260430-0001"
 }
 ```
 
@@ -210,6 +215,7 @@ Y           la transacción se revierte completamente
   "data": {
     "movimiento": {
       "id": 1001,
+      "transactionId": "trx-20260430-0001",
       "tipoMovimiento": "RETIRO",
       "valor": 300.00,
       "saldo": 200.00,
@@ -270,6 +276,17 @@ Y           la transacción se revierte completamente
 }
 ```
 
+**Response 409 — Conflict (Duplicated transactionId)**:
+```json
+{
+  "type": "https://api.example.com/errors/duplicate-transaction",
+  "title": "Conflict — Duplicate Transaction",
+  "status": 409,
+  "detail": "Ya existe un movimiento registrado con el transactionId informado.",
+  "instance": "/api/v1/accounts/5/withdraw"
+}
+```
+
 #### GET /api/v1/accounts/{accountId}/movements
 **Descripción**: Lista todos los movimientos (retiros/depósitos) de una cuenta.
 
@@ -315,15 +332,15 @@ Y           la transacción se revierte completamente
 
 **Paquetes existentes — SIN cambios**:
 - `domain.model` — Entidad pura `Cuenta`
-- `domain.exception` — `InsufficientBalanceException`, `OptimisticLockException`
+- `domain.exception` — `InsufficientFundsException`, `OptimisticLockException`
 - `application.service` — `CuentaService` (casos de uso)
 - `application.dto` — Request/Response DTOs
 - `infrastructure.input.rest` — `CuentaController`
 - `infrastructure.output` — `CuentaRepository` (JPA Adapter)
 
 **Nuevos métodos**:
-- `Cuenta.retirar(BigDecimal monto)` — método de dominio que valida y aplica la lógica de retiro
-- `CuentaService.withdraw(Long cuentaId, BigDecimal monto)` — caso de uso orquestador
+- `Cuenta.retirar(BigDecimal monto)` — único punto donde se evalúa el saldo y se lanza la excepción de dominio
+- `CuentaService.withdraw(Long cuentaId, BigDecimal monto, String transactionId)` — caso de uso orquestador
 - `CuentaController.withdraw(Long cuentaId, WithdrawRequest request)` — endpoint REST
 
 **Servicios externos**: Ninguno.
@@ -333,9 +350,11 @@ Y           la transacción se revierte completamente
 ### Notas de Implementación
 
 - **Optimistic Locking**: JPA se encarga automáticamente de incrementar `@Version` e lanzar `OptimisticLockException` si hay conflicto. No es necesario implementar manualmente.
+- **Java 21 / Virtual Threads**: Configurar `spring.threads.virtual.enabled=true` para el procesamiento de retiros y la persistencia asociada.
 - **Transacción**: El método `CuentaService.withdraw()` debe estar decorado con `@Transactional` para garantizar atomicidad (crear Movimiento + actualizar Cuenta juntos).
-- **Excepciones personalizadas**: `InsufficientBalanceException` (extends `DomainException`) debe ser lanzada desde el método `Cuenta.retirar()`, NO desde el service ni el controller.
-- **Mapeo HTTP**: El `GlobalExceptionHandler` o `@RestControllerAdvice` mapeará `InsufficientBalanceException` a HTTP 409 (Conflict) + RFC 9457.
+- **Excepciones personalizadas**: `InsufficientFundsException` debe ser lanzada desde el método `Cuenta.retirar()`, NO desde el service ni el controller.
+- **Idempotencia**: Si el request incluye `transactionId`, el use case debe consultar si ya existe un movimiento con ese identificador antes de persistir uno nuevo.
+- **Mapeo HTTP**: El `GlobalExceptionHandler` o `@RestControllerAdvice` mapeará `InsufficientFundsException` y conflictos de concurrencia a HTTP 409 (Conflict) + RFC 9457.
 - **RFC 9457**: Todas las respuestas de error deben incluir `type`, `title`, `status`, `detail`, `instance`.
 
 ---
@@ -349,33 +368,38 @@ Y           la transacción se revierte completamente
 
 #### Implementación
 
-- [ ] Crear excepción personalizada `InsufficientBalanceException extends DomainException` en `domain/exception/`
+- [ ] Crear excepción personalizada `InsufficientFundsException extends DomainException` en `domain/exception/`
 - [ ] Implementar método `Cuenta.retirar(BigDecimal monto)` en `domain/model/Cuenta.java` — valida saldo + aplica cambio
-- [ ] Implementar DTO `WithdrawRequest` en `application/dto/` — campos: `amount`, `description` (opcional)
-- [ ] Implementar DTO `MovemientoResponse` en `application/dto/` — campos: id, tipoMovimiento, valor, saldo, fecha
-- [ ] Implementar caso de uso `CuentaService.withdraw(Long cuentaId, BigDecimal monto)` en `application/service/CuentaService.java`
+- [ ] Implementar DTO `WithdrawRequest` en `application/dto/` — campos: `amount`, `description` (opcional), `transactionId` (opcional)
+- [ ] Implementar DTO `MovimientoResponse` en `application/dto/` — campos: id, transactionId, tipoMovimiento, valor, saldo, fecha
+- [ ] Implementar caso de uso `CuentaService.withdraw(Long cuentaId, BigDecimal monto, String transactionId)` en `application/service/CuentaService.java`
 - [ ] Implementar endpoint `@PostMapping("/api/v1/accounts/{accountId}/withdraw")` en `infrastructure/input/rest/CuentaController.java`
 - [ ] Implementar endpoint `@GetMapping("/api/v1/accounts/{accountId}/movements")` en `infrastructure/input/rest/CuentaController.java`
 - [ ] Crear modelo JPA `MovimientoEntity` en `infrastructure/output/` — mapear tabla `movimiento`
+- [ ] Agregar columna `transaction_id` e índice único condicional en `BaseDatos.sql`
 - [ ] Crear `MovimientoRepository extends JpaRepository<MovimientoEntity, Long>` en `infrastructure/output/`
 - [ ] Mapear `CuentaEntity` a JPA con anotación `@Version` en el campo `version`
+- [ ] Configurar `spring.threads.virtual.enabled=true` para el flujo de retiros
 - [ ] Implementar `CuentaRepositoryAdapter` — métodos `save()`, `findById()`, `findAllMovimientos(cuentaId)`
 - [ ] Configurar `@Transactional` en `CuentaService.withdraw()` — garantizar atomicidad
-- [ ] Registrar el handler de `InsufficientBalanceException` y `OptimisticLockException` en `GlobalExceptionHandler`
+- [ ] Registrar el handler de `InsufficientFundsException`, `OptimisticLockException` y duplicidad de `transactionId` en `GlobalExceptionHandler`
 
 #### Tests Backend (Matriz 3-2-1)
 
 **CuentaServiceTests.java** — 3 tests por método
 
 - [ ] `testWithdraw_success_validBalance` — happy path: retiro exitoso con saldo suficiente
-- [ ] `testWithdraw_throwsInsufficientBalanceException_when_amountExceedsBalance` — error path: saldo insuficiente
+- [ ] `testWithdraw_throwsInsufficientFundsException_when_amountExceedsBalance` — error path: saldo insuficiente
 - [ ] `testWithdraw_throwsValidationException_when_amountIsZeroOrNegative` — edge case: validación de monto
+- [ ] `testWithdraw_throwsDuplicateTransactionException_when_transactionIdAlreadyExists` — idempotencia
+- [ ] `testWithdraw_throwsOptimisticLockException_when_versionConflict` — concurrencia
 
 **CuentaControllerTests.java** — 3 tests por endpoint
 
 - [ ] `testPostWithdraw_returns201_when_validRequest` — POST `/api/v1/accounts/{id}/withdraw` — 201
 - [ ] `testPostWithdraw_returns409_when_insufficientBalance` — POST con saldo insuficiente — 409
 - [ ] `testPostWithdraw_returns400_when_invalidAmount` — POST con monto inválido — 400
+- [ ] `testPostWithdraw_returns409_when_duplicateTransactionId` — POST con transactionId duplicado — 409
 - [ ] `testGetMovements_returns200_with_movements` — GET `/api/v1/accounts/{id}/movements` — 200
 - [ ] `testGetMovements_returns404_when_accountNotFound` — GET con account inexistente — 404
 - [ ] `testGetMovements_returns200_with_emptyList_when_noMovements` — GET sin movimientos — 200
@@ -391,12 +415,13 @@ Y           la transacción se revierte completamente
 
 ### QA
 
-- [ ] Ejecutar skill `/gherkin-case-generator` → criterios CRITERIO-1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9
+- [ ] Ejecutar skill `/gherkin-case-generator` → criterios CRITERIO-1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10
 - [ ] Ejecutar skill `/risk-identifier` → clasificación ASD (Alto/Medio/Bajo) de riesgos de concurrencia
 - [ ] Ejecutar skill `/performance-analyzer` → plan de load testing con k6 para transacciones concurrentes
 - [ ] Revisar cobertura de tests contra criterios de aceptación
 - [ ] Validar que todas las reglas de negocio están cubiertas
 - [ ] Validar que el bloqueo optimista funciona bajo concurrencia (test manual con threads)
+- [ ] Validar idempotencia por transactionId en reintentos de red
 - [ ] Actualizar estado spec: `status: IMPLEMENTED` (cuando se complete)
 
 ---

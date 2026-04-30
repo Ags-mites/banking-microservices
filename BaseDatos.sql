@@ -64,10 +64,15 @@ CREATE TABLE movimiento (
     valor DECIMAL(15,2) NOT NULL,
     saldo DECIMAL(15,2) NOT NULL,
     cuenta_id BIGINT NOT NULL,
+    transaction_id VARCHAR(100),
     CONSTRAINT fk_movimiento_cuenta FOREIGN KEY (cuenta_id) REFERENCES cuenta(id)
 );
 
 CREATE INDEX idx_movimiento_cuenta_fecha ON movimiento (cuenta_id, fecha DESC);
+
+CREATE UNIQUE INDEX uq_movimiento_transaction_id
+  ON movimiento(transaction_id)
+  WHERE transaction_id IS NOT NULL;
 
 ALTER TABLE movimiento ADD CONSTRAINT chk_movimiento_valor_no_cero CHECK (valor <> 0);
 

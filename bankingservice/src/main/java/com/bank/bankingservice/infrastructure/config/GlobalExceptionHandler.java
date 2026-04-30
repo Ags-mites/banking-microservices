@@ -8,6 +8,7 @@ import com.bank.bankingservice.domain.exception.MovimientoValidationException;
 import com.bank.bankingservice.infrastructure.input.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -140,6 +141,23 @@ public class GlobalExceptionHandler {
             "Conflict",
             409,
             ex.getMessage(),
+            extractPath(request),
+            LocalDateTime.now().format(dateFormatter)
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            ObjectOptimisticLockingFailureException ex,
+            WebRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+            "https://example.com/errors/optimistic-lock",
+            "Conflict",
+            409,
+            "La cuenta fue modificada por otro proceso. Por favor, intente nuevamente.",
             extractPath(request),
             LocalDateTime.now().format(dateFormatter)
         );

@@ -21,6 +21,7 @@ public class CuentaMapper {
         entity.setSaldoDisponible(cuenta.saldoDisponible());
         entity.setEstado(cuenta.estado());
         entity.setClienteId(cuenta.clienteId());
+        entity.setVersion(cuenta.version());
         if (cuenta.createdAt() != null) {
             entity.setCreatedAt(LocalDateTime.ofInstant(cuenta.createdAt(), ZoneOffset.UTC));
         }
@@ -46,7 +47,8 @@ public class CuentaMapper {
                 entity.getEstado(),
                 entity.getClienteId(),
                 createdAt,
-                updatedAt
+                updatedAt,
+                entity.getVersion()
         );
     }
 }

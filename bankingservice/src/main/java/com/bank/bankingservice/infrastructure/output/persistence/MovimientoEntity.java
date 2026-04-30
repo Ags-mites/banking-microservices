@@ -34,6 +34,9 @@ public class MovimientoEntity {
     @Column(name = "saldo", nullable = false, precision = 15, scale = 2)
     private BigDecimal saldo;
 
+    @Column(name = "transaction_id", length = 100, unique = true)
+    private String transactionId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cuenta_id", nullable = false)
     private CuentaEntity cuenta;
@@ -55,6 +58,8 @@ public class MovimientoEntity {
     public void setValor(BigDecimal valor) { this.valor = valor; }
     public BigDecimal getSaldo() { return saldo; }
     public void setSaldo(BigDecimal saldo) { this.saldo = saldo; }
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public CuentaEntity getCuenta() { return cuenta; }
     public void setCuenta(CuentaEntity cuenta) { this.cuenta = cuenta; }
 }
