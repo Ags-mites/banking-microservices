@@ -52,12 +52,3 @@ logging:
     org.apache: WARN
   pattern:
     console: "%clr(%d{HH:mm:ss}){faint} %clr(%-5level) %clr([%thread]){cyan} %clr(%logger{36}){blue} - %msg%n"
-
-# SpringDoc OpenAPI (Swagger)
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
-  api-docs:
-    path: /api-docs

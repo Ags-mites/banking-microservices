@@ -14,15 +14,21 @@ import java.util.List;
 @Service
 public class CuentaService implements CuentaUseCase {
     private final CuentaRepository repository;
+    private final com.bank.bankingservice.domain.ports.out.ClientVerifier clientVerifier;
 
-    public CuentaService(CuentaRepository repository) {
+    public CuentaService(CuentaRepository repository, com.bank.bankingservice.domain.ports.out.ClientVerifier clientVerifier) {
         this.repository = repository;
+        this.clientVerifier = clientVerifier;
     }
 
     @Override
     public Cuenta createAccount(Long clienteId, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial) {
         if (repository.existsByNumeroCuenta(numeroCuenta)) {
             throw new AccountConflictException("El número de cuenta ya existe.");
+        }
+
+        if (clienteId == null || !clientVerifier.existsById(clienteId)) {
+            throw new AccountValidationException("El cliente con ID " + clienteId + " no existe.");
         }
 
         Cuenta cuenta = Cuenta.abrir(clienteId, numeroCuenta, tipoCuenta, saldoInicial);

@@ -1,6 +1,6 @@
 ---
 id: SPEC-002
-status: DRAFT
+status: APPROVED
 feature: account-management
 created: 2026-04-29
 updated: 2026-04-29
@@ -69,8 +69,15 @@ Entonces:  El sistema retorna HTTP 201
 Dado que:  Una cuenta con número "123456789" ya existe
 Cuando:    Intento crear otra cuenta con el mismo número
 Entonces:  El sistema retorna HTTP 409 Conflict
-           El mensaje de error indica:
-           "El número de cuenta ya existe."
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-conflict",
+             "title": "Conflict",
+             "status": 409,
+             "detail": "El número de cuenta ya existe.",
+             "instance": "/api/cuentas"
+           }
+           Manejado por GlobalExceptionHandler cuando AccountConflictException es lanzada
 ```
 
 **CRITERIO-1.3: Validar tipo de cuenta**
@@ -78,8 +85,15 @@ Entonces:  El sistema retorna HTTP 409 Conflict
 Dado que:  Los tipos válidos son "Ahorros" y "Corriente"
 Cuando:    Intento crear una cuenta con tipo "Invalido"
 Entonces:  El sistema retorna HTTP 400 Bad Request
-           El mensaje indica:
-           "Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos."
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-validation",
+             "title": "Bad Request",
+             "status": 400,
+             "detail": "Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos.",
+             "instance": "/api/cuentas"
+           }
+           Lanzado en constructor Cuenta.abrir() como AccountValidationException
 ```
 
 **CRITERIO-1.4: Validar saldo no negativo (Edge Case)**
@@ -87,8 +101,31 @@ Entonces:  El sistema retorna HTTP 400 Bad Request
 Dado que:  Se requiere un saldo válido
 Cuando:    Intento crear una cuenta con saldoInicial = -500.00
 Entonces:  El sistema retorna HTTP 400 Bad Request
-           El mensaje indica:
-           "El saldo no puede ser negativo."
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-validation",
+             "title": "Bad Request",
+             "status": 400,
+             "detail": "El saldo no puede ser negativo.",
+             "instance": "/api/cuentas"
+           }
+           Lanzado en constructor Cuenta.abrir() como AccountValidationException
+```
+
+**CRITERIO-1.5: Validar existencia de cliente al crear cuenta**
+```gherkin
+Dado que:  No existe un cliente con `clienteId = 9999` en customerservice
+Cuando:    Envío POST /api/cuentas con `clienteId = 9999`
+Entonces:  El sistema retorna HTTP 400 Bad Request
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-validation",
+             "title": "Bad Request",
+             "status": 400,
+             "detail": "El cliente con ID 9999 no existe.",
+             "instance": "/api/cuentas"
+           }
+           La validación se ejecuta vía puerto ClientVerifier antes de persistir
 ```
 
 ---
@@ -155,8 +192,14 @@ Entonces:  El sistema retorna HTTP 200 OK
 Dado que:  No existe una cuenta con `id = 999`
 Cuando:    Envío GET /api/cuentas/999
 Entonces:  El sistema retorna HTTP 404 Not Found
-           El mensaje indica:
-           "Cuenta no encontrada con id: 999"
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-not-found",
+             "title": "Not Found",
+             "status": 404,
+             "detail": "Cuenta no encontrada con id: 999",
+             "instance": "/api/cuentas/999"
+           }
 ```
 
 ---
@@ -216,7 +259,14 @@ Entonces:  El sistema ignora el cambio
 Dado que:  Una cuenta existe
 Cuando:    Intento actualizar con tipoCuenta = "Invalido"
 Entonces:  El sistema retorna HTTP 400 Bad Request
-           El mensaje indica el error de validación
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-validation",
+             "title": "Bad Request",
+             "status": 400,
+             "detail": "Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos.",
+             "instance": "/api/cuentas/1"
+           }
 ```
 
 ---
@@ -250,7 +300,14 @@ Entonces:  El sistema retorna HTTP 204 No Content
 Dado que:  No existe una cuenta con `id = 999`
 Cuando:    Envío DELETE /api/cuentas/999
 Entonces:  El sistema retorna HTTP 404 Not Found
-           El mensaje indica que la cuenta no existe
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-not-found",
+             "title": "Not Found",
+             "status": 404,
+             "detail": "Cuenta no encontrada con id: 999",
+             "instance": "/api/cuentas/999"
+           }
 ```
 
 ---
@@ -275,8 +332,14 @@ Capa:        Backend
 Dado que:  Un número de cuenta es obligatorio
 Cuando:    Intento crear una cuenta con numeroCuenta = "" o null
 Entonces:  El sistema retorna HTTP 400 Bad Request
-           El mensaje indica:
-           "El número de cuenta es obligatorio."
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-validation",
+             "title": "Bad Request",
+             "status": 400,
+             "detail": "El número de cuenta es obligatorio.",
+             "instance": "/api/cuentas"
+           }
 ```
 
 **CRITERIO-6.2: Validar número de cuenta único en base de datos**
@@ -284,26 +347,42 @@ Entonces:  El sistema retorna HTTP 400 Bad Request
 Dado que:  Dos cuentas no pueden tener el mismo número
 Cuando:    Intento crear cuentas con el mismo numero_cuenta
 Entonces:  El sistema retorna HTTP 409 Conflict en la segunda creación
-           El constraint UNIQUE en BaseDatos.sql lo previene
+           La respuesta contiene (RFC 9457):
+           {
+             "type": "https://api.example.com/errors/account-conflict",
+             "title": "Conflict",
+             "status": 409,
+             "detail": "El número de cuenta ya existe.",
+             "instance": "/api/cuentas"
+           }
+           Constraint UNIQUE en BaseDatos.sql lo previene a nivel BD
+           GlobalExceptionHandler maneja AccountConflictException → 409
 ```
 
 ---
 
 ### Reglas de Negocio
 
-1. **Número de Cuenta Único**: El campo `numero_cuenta` es UNIQUE en la base de datos. No pueden coexistir dos cuentas con el mismo número.
+1. **Número de Cuenta Único**: El campo `numero_cuenta` es UNIQUE en la base de datos. No pueden coexistir dos cuentas con el mismo número. Validación en:
+   - Nivel BD: Constraint UNIQUE en BaseDatos.sql
+   - Nivel Aplicación: `CuentaService.createAccount()` consulta `repository.existsByNumeroCuenta()`
+   - Manejo de Error: `AccountConflictException` → GlobalExceptionHandler → HTTP 409
 
-2. **Tipos de Cuenta Válidos**: Solo se permiten dos tipos:
+2. **Tipos de Cuenta Válidos**: Solo se permiten dos tipos — validación en constructor de dominio:
    - `"Ahorros"`
    - `"Corriente"`
-   
-   Cualquier otro valor es rechazado con validación de dominio.
+   - Cualquier otro valor es rechazado con `AccountValidationException` en `Cuenta.abrir()`
+   - Ubicación: `domain/model/Cuenta.java` - método factory `abrir()`
 
-3. **Saldo No Negativo**: El `saldo_inicial` y `saldo_disponible` nunca pueden ser negativos. Validación aplicada en el modelo de dominio.
+3. **Saldo No Negativo**: El `saldo_inicial` y `saldo_disponible` nunca pueden ser negativos. Validación en constructor del dominio (`Cuenta.abrir()`) antes de crear la entidad. Rechaza con `AccountValidationException`.
 
-4. **Número de Cuenta Inmutable**: Una vez creada la cuenta, el `numero_cuenta` NO puede ser modificado en operaciones PUT/PATCH.
+4. **Número de Cuenta Inmutable**: Una vez creada la cuenta, el `numero_cuenta` NO puede ser modificado en operaciones PUT/PATCH. El método `actualizar()` no incluye este campo.
 
-5. **Referencia a Cliente Obligatoria**: Toda cuenta debe estar vinculada a un `cliente_id` existente en el microservicio de clientes (customerservice).
+5. **Referencia a Cliente Obligatoria y Validada**: Toda cuenta DEBE estar vinculada a un `cliente_id` existente en customerservice.
+   - **Validación**: Síncrona vía puerto `ClientVerifier` al crear la cuenta
+   - **Implementación**: `CuentaService.createAccount()` valida antes de persistir
+   - **Error si no existe**: `AccountValidationException` → HTTP 400 → "El cliente con ID X no existe."
+   - **Regla de Integridad**: Previene crear cuentas para clientes fantasma (fuga de integridad)
 
 6. **Estado Booleano**: El campo `estado` es un booleano que indica si la cuenta está activa (true) o inactiva (false).
 
@@ -347,7 +426,7 @@ CREATE TABLE cuenta (
 | `saldo_inicial` | DECIMAL(15,2) | sí | >= 0 | Saldo inicial de la cuenta |
 | `saldo_disponible` | DECIMAL(15,2) | sí | >= 0 | Saldo disponible actual |
 | `estado` | BOOLEAN | sí | default true | Indica si la cuenta está activa |
-| `cliente_id` | BIGINT | sí | NOT NULL (FK → cliente) | Referencia al cliente propietario |
+| `cliente_id` | BIGINT | sí | NOT NULL (validación por ClientVerifier) | Referencia al cliente propietario |
 | `version` | INTEGER | sí | default 0 | Optimistic locking para concurrencia |
 | `created_at` | TIMESTAMP | sí | auto (UTC) | Timestamp de creación |
 | `updated_at` | TIMESTAMP | sí | auto (UTC) | Timestamp de última actualización |
@@ -355,7 +434,7 @@ CREATE TABLE cuenta (
 #### Índices y Constraints
 - **PRIMARY KEY**: `id` — búsqueda rápida por identificador
 - **UNIQUE**: `numero_cuenta` — garantiza unicidad de números de cuenta
-- **FOREIGN KEY**: `cliente_id` → tabla `cliente` (customer_db) — integridad referencial
+- **NOTA DE INTEGRIDAD**: En arquitectura de microservicios no se asume FK física cross-service; la existencia de `cliente_id` se garantiza en capa de aplicación vía `ClientVerifier`.
 
 ---
 
@@ -389,13 +468,33 @@ CREATE TABLE cuenta (
     "timestamp": "2026-04-29T10:30:00Z"
   }
   ```
-- **Response 400 Bad Request**: Campo faltante, tipo inválido, saldo negativo
+- **Response 400 Bad Request**: Campo faltante, tipo inválido, saldo negativo, cliente inexistente
+- **Response 400 Bad Request**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-validation",
+    "title": "Bad Request",
+    "status": 400,
+    "detail": "Error de validación en la solicitud.",
+    "instance": "/api/cuentas"
+  }
+  ```
 - **Response 409 Conflict**: Número de cuenta ya existe
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-conflict",
+    "title": "Conflict",
+    "status": 409,
+    "detail": "El número de cuenta ya existe.",
+    "instance": "/api/cuentas"
+  }
+  ```
+  Manejado por `GlobalExceptionHandler` cuando `AccountConflictException` es lanzada por `CuentaService.createAccount()`.
 - **Errores específicos**:
   - `"El número de cuenta es obligatorio."`
   - `"Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos."`
   - `"El saldo no puede ser negativo."`
-  - `"El número de cuenta ya existe."`
+- `"El cliente con ID X no existe."`
 
 #### GET /api/cuentas
 - **Descripción**: Lista todas las cuentas
@@ -457,7 +556,8 @@ CREATE TABLE cuenta (
 - **Response 404 Not Found**: La cuenta no existe
   ```json
   {
-    "title": "Not Found — Account not found",
+    "type": "https://api.example.com/errors/account-not-found",
+    "title": "Not Found",
     "status": 404,
     "detail": "Cuenta no encontrada con id: 999",
     "instance": "/api/cuentas/999"
@@ -490,8 +590,26 @@ CREATE TABLE cuenta (
     "timestamp": "2026-04-29T10:30:00Z"
   }
   ```
-- **Response 400 Bad Request**: Tipo de cuenta inválido
-- **Response 404 Not Found**: La cuenta no existe
+- **Response 400 Bad Request**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-validation",
+    "title": "Bad Request",
+    "status": 400,
+    "detail": "Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos.",
+    "instance": "/api/cuentas/1"
+  }
+  ```
+- **Response 404 Not Found**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-not-found",
+    "title": "Not Found",
+    "status": 404,
+    "detail": "Cuenta no encontrada con id: 999",
+    "instance": "/api/cuentas/999"
+  }
+  ```
 - **Notas**:
   - `numeroCuenta` se ignora si se envía (campo inmutable)
   - `saldoInicial` y `saldoDisponible` se ignoran (no editables mediante PUT)
@@ -508,6 +626,26 @@ CREATE TABLE cuenta (
   }
   ```
 - **Response 200 OK**: Mismo formato que PUT
+- **Response 400 Bad Request**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-validation",
+    "title": "Bad Request",
+    "status": 400,
+    "detail": "Tipo de cuenta inválido. Solo 'Ahorros' o 'Corriente' están permitidos.",
+    "instance": "/api/cuentas/1"
+  }
+  ```
+- **Response 404 Not Found**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-not-found",
+    "title": "Not Found",
+    "status": 404,
+    "detail": "Cuenta no encontrada con id: 999",
+    "instance": "/api/cuentas/999"
+  }
+  ```
 - **Behavior**: En la implementación actual, PATCH se comporta igual que PUT (acepta los mismos campos opcionales)
 
 #### DELETE /api/cuentas/{id}
@@ -515,26 +653,106 @@ CREATE TABLE cuenta (
 - **Auth requerida**: No (por ahora)
 - **Path Parameters**: `id` (BIGINT)
 - **Response 204 No Content**: Eliminación exitosa (sin body)
-- **Response 404 Not Found**: La cuenta no existe
+- **Response 404 Not Found**:
+  ```json
+  {
+    "type": "https://api.example.com/errors/account-not-found",
+    "title": "Not Found",
+    "status": 404,
+    "detail": "Cuenta no encontrada con id: 999",
+    "instance": "/api/cuentas/999"
+  }
+  ```
 - **Notas**:
   - Después de eliminar, intentos posteriores de acceso retornan 404
 
 ---
 
+### Puerto de Validación de Cliente (ClientVerifier)
+
+**Interfaz**: `domain/ports/out/ClientVerifier.java`
+
+```java
+public interface ClientVerifier {
+    boolean existsById(Long clienteId);
+}
+```
+
+**Comportamiento**:
+- **Happy Path**: Llamada REST GET `/api/clientes/{clienteId}` a customerservice
+  - Respuesta 200 → Cliente existe → retorna `true`
+- **Error Path**: 
+  - Respuesta 404 → Cliente no existe → retorna `false` (service lanza `AccountValidationException` HTTP 400)
+  - Respuesta 5xx (timeout, unavailable) → excepción técnica de infraestructura (retry policy opcional)
+
+**Implementación**: `infrastructure/output/ClientVerifierAdapter.java`
+- Usa `RestTemplate` o `WebClient` (preferible) para llamada síncrona
+- Configurar timeout: 5 segundos máximo
+- Punto de llamada: `CuentaService.createAccount()` antes de crear la entidad
+
+**Ejemplo de Uso en Service**:
+```java
+@Override
+public Cuenta createAccount(Long clienteId, String numeroCuenta, String tipoCuenta, BigDecimal saldoInicial) {
+    // 1. Validar existencia del cliente (integridad referencial)
+  if (!clientVerifier.existsById(clienteId)) {
+        throw new AccountValidationException("El cliente con ID " + clienteId + " no existe.");
+    }
+    
+    // 2. Validar unicidad del número de cuenta
+    if (repository.existsByNumeroCuenta(numeroCuenta)) {
+        throw new AccountConflictException("El número de cuenta ya existe.");
+    }
+    
+    // 3. Crear la cuenta
+    Cuenta cuenta = Cuenta.abrir(clienteId, numeroCuenta, tipoCuenta, saldoInicial);
+    return repository.save(cuenta);
+}
+```
+
+---
+
 ### Arquitectura y Dependencias
 
+#### Configuración de Infraestructura
+
+**application.yaml** — Virtual Threads (Java 21)
+```yaml
+spring:
+  threads:
+    virtual:
+      enabled: true
+```
+
+**Justificación**: Habilita virtual threads para mejorar throughput en operaciones I/O concurrentes (especialmente en las llamadas REST a clientVerifier). Recomendado para microservicios con alto volumen de transacciones.
+
+---
+
 #### Paquetes Java Requeridos
-- `com.bank.bankingservice.domain.model` — Modelo `Cuenta` (dominio puro)
+- `com.bank.bankingservice.domain.model` — Modelo `Cuenta` (dominio puro, Java v21)
 - `com.bank.bankingservice.domain.ports.in` — Interfaz `CuentaUseCase`
-- `com.bank.bankingservice.domain.ports.out` — Interfaz `CuentaRepository`
-- `com.bank.bankingservice.domain.exception` — Excepciones (`AccountValidationException`, `AccountConflictException`, `AccountNotFoundException`)
+- `com.bank.bankingservice.domain.ports.out` — Interfaces de salida:
+  - `CuentaRepository` — operaciones CRUD en BD
+  - `ClientVerifier` — validación de existencia de cliente en customerservice (REST)
+- `com.bank.bankingservice.domain.exception` — Excepciones:
+  - `AccountValidationException` (extends `DomainException`) → HTTP 400
+  - `AccountConflictException` (extends `DomainException`) → HTTP 409
+  - `AccountNotFoundException` (extends `DomainException`) → HTTP 404
 - `com.bank.bankingservice.application.service` — Implementación `CuentaService`
 - `com.bank.bankingservice.application.dto` — DTOs (`CuentaCreateRequest`, `CuentaUpdateRequest`, `CuentaResponse`)
 - `com.bank.bankingservice.infrastructure.input.rest` — Controller `CuentaController`
-- `com.bank.bankingservice.infrastructure.output` — Adaptador JPA `CuentaRepository`
+- `com.bank.bankingservice.infrastructure.config` — `GlobalExceptionHandler` (@RestControllerAdvice)
+- `com.bank.bankingservice.infrastructure.output` — Adaptadores:
+  - `CuentaRepository` (JPA)
+  - `ClientVerifierAdapter` (REST client para customerservice)
 
 #### Servicios Externos
-- **customerservice**: Microservicio de clientes. La tabla `cuenta` tiene FK → `cliente.id` pero NO hay validación en tiempo de ejecución (posible integración vía eventos con RabbitMQ en futuras fases).
+- **customerservice**: Microservicio de clientes.
+  - **Validación de Existencia del Cliente**: OBLIGATORIA en tiempo de creación de cuenta
+  - Mecanismo: Puerto de Salida `ClientVerifier` → implementación REST (llamada síncrona a `/api/clientes/{id}`)
+  - **Regla de Integridad**: No se permite crear una cuenta para un `cliente_id` que NO existe en customerservice
+  - Comportamiento: Si cliente no existe → `AccountValidationException` HTTP 400
+  - Futuro: Posible evolución a event-driven (RabbitMQ `cliente.creado`) en fase posterior
 
 #### Dependencias Internas
 - Spring Boot 4
@@ -547,19 +765,45 @@ CREATE TABLE cuenta (
 
 ### Notas de Implementación
 
-> **Arquitectura Hexagonal Completa**: La implementación sigue estrictamente el patrón hexagonal con capas separadas (Domain → Application → Infrastructure). El modelo de dominio es Java PURO sin anotaciones de framework.
+> **Arquitectura Hexagonal Completa**: La implementación sigue estrictamente el patrón hexagonal con capas separadas (Domain → Application → Infrastructure). El modelo de dominio es Java PURO (v21) sin anotaciones de framework (sin Spring, sin JPA).
 
-> **Validación en Dominio**: Las reglas de negocio (número de cuenta único, tipos válidos, saldo no negativo) se validan en el modelo de dominio (`Cuenta`) antes de pasar por el repositorio.
+> **Validación en Constructor (Java Puro v21)**: Las reglas de negocio residen en el constructor o factory methods del modelo de dominio:
+>   - **Tipo de Cuenta**: Validación en el constructor `Cuenta.abrir()` y `Cuenta.reconstituir()`. Solo acepta "Ahorros" o "Corriente".
+>   - **Número de Cuenta**: Validado como no null/vacío en constructor. Unicidad verificada en `CuentaService.createAccount()` via `CuentaRepository.existsByNumeroCuenta()`.
+>   - **Saldo No Negativo**: Validado en constructor, rechaza valores negativos con excepción de dominio.
+>   - Método factory `Cuenta.abrir(clienteId, numeroCuenta, tipoCuenta, saldoInicial)` encapsula validación.
+
+> **Puerto de Validación de Cliente (ClientVerifier)**: Nuevo puerto de salida en `domain/ports/out/` para validar existencia de cliente en customerservice de manera síncrona (integridad referencial).
+>   - Ubicación de llamada: `CuentaService.createAccount()` **antes** de crear la entidad
+>   - Implementación: `ClientVerifierAdapter` con `RestTemplate` o `WebClient`
+>   - Contrato: `existsById(Long clienteId): boolean`
+>   - Comportamiento: Si retorna `false` → `CuentaService` lanza `AccountValidationException` → HTTP 400
+>   - Timeout: 5 segundos máximo para no bloquear transacciones
+
+> **Manejo de Errores con GlobalExceptionHandler**: Integración con `GlobalExceptionHandler` en `infrastructure/config/`:
+>   - `AccountValidationException` → HTTP 400 Bad Request (errores de validación incluyendo cliente no encontrado)
+>   - `AccountNotFoundException` → HTTP 404 Not Found (cuenta no existe)
+>   - `AccountConflictException` → HTTP 409 Conflict (número de cuenta duplicado)
+>   - Patrón similar a customerservice: handler centralizado retorna ErrorResponse con RFC 9457.
+
+> **Virtual Threads (Java 21)**: Habilitados en `application.yaml` con `spring.threads.virtual.enabled: true`. Mejora throughput en llamadas I/O concurrentes, especialmente en validaciones REST a clientVerifier.
 
 > **DTOs Inmutables**: Se usan `record` (Java 16+) para DTOs, garantizando inmutabilidad en la capa de presentación.
 
 > **Optimistic Locking**: El campo `version` implementa control de concurrencia optimista. Útil para detectar conflictos en actualizaciones simultáneas.
 
-> **Basque de datos como Fuente de Verdad**: El esquema está definido en `BaseDatos.sql`. NO se usa `ddl-auto=update`. JPA mapea entidades a tablas existentes.
+> **Base de Datos como Fuente de Verdad**: El esquema está definido en `BaseDatos.sql`. NO se usa `ddl-auto=update`. JPA mapea entidades a tablas existentes.
 
-> **RFC 9457 + Envelope JSON**: Las respuestas siguen el estándar de errores RFC 9457 con envelope JSON que incluye timestamp en cada respuesta.
-
-> **Concurrencia**: La aplicación usa Virtual Threads de Java 21 para mejorar throughput en operaciones I/O (si está habilitado en `application.yaml`).
+> **RFC 9457 + Envelope JSON**: Las respuestas siguen el estándar de errores RFC 9457 con estructura:
+>   ```json
+>   {
+>     "type": "https://api.example.com/errors/account-conflict",
+>     "title": "Conflict",
+>     "status": 409,
+>     "detail": "El número de cuenta ya existe.",
+>     "instance": "/api/cuentas"
+>   }
+>   ```
 
 ---
 
@@ -572,13 +816,17 @@ CREATE TABLE cuenta (
 #### Implementación
 - [x] Crear modelo de dominio `Cuenta` — Java PURO con métodos factory (abrir, reconstituir)
 - [x] Implementar `CuentaUseCase` (interfaz) — puertos de entrada
-- [x] Implementar `CuentaRepository` (interfaz) — puertos de salida
+- [x] Implementar `CuentaRepository` (interfaz) — puertos de salida (persistencia)
+- [ ] Implementar `ClientVerifier` (interfaz) — puerto de salida (validación de cliente)
 - [x] Implementar `CuentaService` — lógica de negocio (crearCuenta, obtenerCuenta, actualizarCuenta, eliminarCuenta)
+- [ ] Actualizar `CuentaService.createAccount()` — integrar validación de cliente via ClientVerifier
 - [x] Implementar `CuentaController` (/api/cuentas) — endpoints CRUD con ResponseEntity y envelope JSON
 - [x] Crear DTOs: `CuentaCreateRequest`, `CuentaUpdateRequest`, `CuentaResponse`
 - [x] Implementar excepciones de dominio: `AccountValidationException`, `AccountConflictException`, `AccountNotFoundException`
 - [x] Mapear JPA `CuentaDocument` (entidad) a tabla `cuenta`
 - [x] Implementar adaptador JPA `CuentaRepositoryAdapter`
+- [ ] Implementar adaptador REST `ClientVerifierAdapter` — llamada a customerservice
+- [ ] Configurar `application.yaml` — Virtual Threads: `spring.threads.virtual.enabled: true`
 
 #### Tests Backend (Matriz 3-2-1)
 
@@ -588,6 +836,7 @@ CREATE TABLE cuenta (
 - [ ] `createAccount_success` — Happy path con todos los campos válidos
 - [ ] `createAccount_throws_conflict_when_account_number_exists` — Número de cuenta duplicado
 - [ ] `createAccount_throws_validation_when_invalid_type` — Tipo de cuenta inválido
+- [ ] `createAccount_throws_validation_when_client_not_exists` — Cliente inexistente
 - [ ] `getAllAccounts_returns_list_success` — Lista todas las cuentas
 - [ ] `getAllAccounts_returns_empty_list_when_no_accounts` — Lista vacía
 - [ ] `getAllAccounts_edge_case` — (Edge case: ej. con saldo muy grande)

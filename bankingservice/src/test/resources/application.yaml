@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: bankingservice
+  datasource:
+    url: jdbc:postgresql://localhost:5432/banking_db
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+customerservice:
+  base-url: http://localhost:8081

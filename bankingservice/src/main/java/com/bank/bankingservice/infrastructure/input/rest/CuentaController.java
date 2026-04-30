@@ -17,9 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,7 +31,7 @@ public class CuentaController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createAccount(@RequestBody CuentaCreateRequest request) {
+    public ResponseEntity<CuentaResponse> createAccount(@RequestBody CuentaCreateRequest request) {
         Cuenta createdCuenta = cuentaUseCase.createAccount(
                 request.clienteId(),
                 request.numeroCuenta(),
@@ -51,48 +49,36 @@ public class CuentaController {
                 createdCuenta.clienteId()
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "data", response,
-                "timestamp", Instant.now().toString()
-        ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getAllAccounts() {
+    public ResponseEntity<List<CuentaResponse>> getAllAccounts() {
         List<CuentaResponse> responses = cuentaUseCase.getAllAccounts().stream()
                 .map(c -> new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId()))
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(Map.of(
-                "data", responses,
-                "timestamp", Instant.now().toString()
-        ));
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getAccountById(@PathVariable Long id) {
+    public ResponseEntity<CuentaResponse> getAccountById(@PathVariable Long id) {
         Cuenta c = cuentaUseCase.getAccountById(id);
         CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
 
-        return ResponseEntity.ok(Map.of(
-                "data", response,
-                "timestamp", Instant.now().toString()
-        ));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
+    public ResponseEntity<CuentaResponse> updateAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
         Cuenta c = cuentaUseCase.updateAccount(id, request.tipoCuenta(), request.estado());
         CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
 
-        return ResponseEntity.ok(Map.of(
-                "data", response,
-                "timestamp", Instant.now().toString()
-        ));
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> patchAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
+    public ResponseEntity<CuentaResponse> patchAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
         return updateAccount(id, request);
     }
 

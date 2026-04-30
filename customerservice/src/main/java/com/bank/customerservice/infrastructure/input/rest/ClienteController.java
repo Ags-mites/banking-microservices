@@ -10,8 +10,6 @@ import com.bank.customerservice.application.dto.ClienteCreateRequest;
 import com.bank.customerservice.application.dto.ClienteUpdateRequest;
 import com.bank.customerservice.application.dto.ClientePatchRequest;
 import com.bank.customerservice.application.dto.ClienteResponse;
-import com.bank.customerservice.domain.exception.ClienteNotFoundException;
-import com.bank.customerservice.domain.exception.IdentificacionDuplicadaException;
 import com.bank.customerservice.domain.ports.in.ClienteUseCase;
 
 /**
