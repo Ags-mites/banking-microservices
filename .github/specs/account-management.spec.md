@@ -58,7 +58,6 @@ Entonces:  El sistema retorna HTTP 201
            - "numeroCuenta": "123456789"
            - "tipoCuenta": "Ahorros"
            - "saldoInicial": 1000.00
-           - "saldoDisponible": 1000.00
            - "estado": true
            - "clienteId": 1
            - "timestamp": ISO 8601 en UTC
@@ -151,7 +150,7 @@ Dado que:  Existen cuentas en el sistema
 Cuando:    Envío GET /api/cuentas
 Entonces:  El sistema retorna HTTP 200 OK
            La respuesta contiene un array con todas las cuentas
-           Cada cuenta incluye: id, numeroCuenta, tipoCuenta, saldoInicial, saldoDisponible, estado, clienteId
+           Cada cuenta incluye: id, numeroCuenta, tipoCuenta, saldoInicial, estado, clienteId
 ```
 
 **CRITERIO-2.2: Manejar lista vacía**
@@ -374,7 +373,7 @@ Entonces:  El sistema retorna HTTP 409 Conflict en la segunda creación
    - Cualquier otro valor es rechazado con `AccountValidationException` en `Cuenta.abrir()`
    - Ubicación: `domain/model/Cuenta.java` - método factory `abrir()`
 
-3. **Saldo No Negativo**: El `saldo_inicial` y `saldo_disponible` nunca pueden ser negativos. Validación en constructor del dominio (`Cuenta.abrir()`) antes de crear la entidad. Rechaza con `AccountValidationException`.
+3. **Saldo No Negativo**: El `saldo_inicial` nunca puede ser negativo. Validación en constructor del dominio (`Cuenta.abrir()`) antes de crear la entidad. Rechaza con `AccountValidationException`.
 
 4. **Número de Cuenta Inmutable**: Una vez creada la cuenta, el `numero_cuenta` NO puede ser modificado en operaciones PUT/PATCH. El método `actualizar()` no incluye este campo.
 
@@ -387,8 +386,6 @@ Entonces:  El sistema retorna HTTP 409 Conflict en la segunda creación
 6. **Estado Booleano**: El campo `estado` es un booleano que indica si la cuenta está activa (true) o inactiva (false).
 
 7. **Timestamps Automáticos**: Los campos `created_at` y `updated_at` son generados/actualizados automáticamente por la aplicación. Formato UTC en ISO 8601.
-
-8. **Version para Concurrencia Optimista**: El campo `version` (INTEGER) implementa optimistic locking para evitar conflictos en actualizaciones concurrentes.
 
 ---
 
@@ -408,10 +405,8 @@ CREATE TABLE cuenta (
     numero_cuenta VARCHAR(20) NOT NULL UNIQUE,
     tipo_cuenta VARCHAR(20) NOT NULL,
     saldo_inicial DECIMAL(15,2) NOT NULL DEFAULT 0,
-    saldo_disponible DECIMAL(15,2) NOT NULL DEFAULT 0,
     estado BOOLEAN DEFAULT true,
     cliente_id BIGINT NOT NULL,
-    version INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -424,10 +419,8 @@ CREATE TABLE cuenta (
 | `numero_cuenta` | VARCHAR(20) | sí | UNIQUE, no null | Número de cuenta único en el sistema |
 | `tipo_cuenta` | VARCHAR(20) | sí | "Ahorros" \| "Corriente" | Clasificación de la cuenta |
 | `saldo_inicial` | DECIMAL(15,2) | sí | >= 0 | Saldo inicial de la cuenta |
-| `saldo_disponible` | DECIMAL(15,2) | sí | >= 0 | Saldo disponible actual |
 | `estado` | BOOLEAN | sí | default true | Indica si la cuenta está activa |
 | `cliente_id` | BIGINT | sí | NOT NULL (validación por ClientVerifier) | Referencia al cliente propietario |
-| `version` | INTEGER | sí | default 0 | Optimistic locking para concurrencia |
 | `created_at` | TIMESTAMP | sí | auto (UTC) | Timestamp de creación |
 | `updated_at` | TIMESTAMP | sí | auto (UTC) | Timestamp de última actualización |
 
@@ -462,7 +455,6 @@ CREATE TABLE cuenta (
       "numeroCuenta": "123456789",
       "tipoCuenta": "Ahorros",
       "saldoInicial": 1000.00,
-      "saldoDisponible": 1000.00,
       "estado": true
     },
     "timestamp": "2026-04-29T10:30:00Z"
@@ -510,7 +502,6 @@ CREATE TABLE cuenta (
         "numeroCuenta": "123456789",
         "tipoCuenta": "Ahorros",
         "saldoInicial": 1000.00,
-        "saldoDisponible": 1000.00,
         "estado": true
       },
       {
@@ -519,7 +510,6 @@ CREATE TABLE cuenta (
         "numeroCuenta": "987654321",
         "tipoCuenta": "Corriente",
         "saldoInicial": 5000.00,
-        "saldoDisponible": 5000.00,
         "estado": true
       }
     ],
@@ -547,7 +537,6 @@ CREATE TABLE cuenta (
       "numeroCuenta": "123456789",
       "tipoCuenta": "Ahorros",
       "saldoInicial": 1000.00,
-      "saldoDisponible": 1000.00,
       "estado": true
     },
     "timestamp": "2026-04-29T10:30:00Z"
@@ -584,7 +573,6 @@ CREATE TABLE cuenta (
       "numeroCuenta": "123456789",
       "tipoCuenta": "Corriente",
       "saldoInicial": 1000.00,
-      "saldoDisponible": 1000.00,
       "estado": true
     },
     "timestamp": "2026-04-29T10:30:00Z"
@@ -612,7 +600,7 @@ CREATE TABLE cuenta (
   ```
 - **Notas**:
   - `numeroCuenta` se ignora si se envía (campo inmutable)
-  - `saldoInicial` y `saldoDisponible` se ignoran (no editables mediante PUT)
+  - `saldoInicial` se ignora (no editable mediante PUT)
   - `updated_at` se actualiza automáticamente
 
 #### PATCH /api/cuentas/{id}
@@ -789,8 +777,6 @@ spring:
 > **Virtual Threads (Java 21)**: Habilitados en `application.yaml` con `spring.threads.virtual.enabled: true`. Mejora throughput en llamadas I/O concurrentes, especialmente en validaciones REST a clientVerifier.
 
 > **DTOs Inmutables**: Se usan `record` (Java 16+) para DTOs, garantizando inmutabilidad en la capa de presentación.
-
-> **Optimistic Locking**: El campo `version` implementa control de concurrencia optimista. Útil para detectar conflictos en actualizaciones simultáneas.
 
 > **Base de Datos como Fuente de Verdad**: El esquema está definido en `BaseDatos.sql`. NO se usa `ddl-auto=update`. JPA mapea entidades a tablas existentes.
 

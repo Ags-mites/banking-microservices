@@ -19,7 +19,7 @@ related-specs: ["SPEC-001"]
 ## 1. REQUERIMIENTOS
 
 ### Descripción
-El sistema debe registrar todas las transacciones (depósitos y retiros) en las cuentas bancarias, mantener un historial completo de movimientos y actualizar automáticamente el saldo disponible de la cuenta. Cada movimiento incluye fecha automática, tipo (depósito o retiro), valor y refleja el saldo resultante de la operación.
+El sistema debe registrar todas las transacciones (depósitos y retiros) en las cuentas bancarias y mantener un historial completo de movimientos. Cada movimiento incluye fecha automática, tipo (depósito o retiro), valor y el saldo resultante de la operación. El saldo disponible no se duplica en la cuenta: se calcula y persiste en el movimiento.
 
 ### Requerimiento de Negocio
 Como sistema bancario, quiero registrar transacciones, para mantener el historial y actualizar el saldo.
@@ -31,7 +31,7 @@ Como sistema bancario, quiero registrar transacciones, para mantener el historia
 ```
 Como:        Sistema bancario
 Quiero:      Crear un movimiento de tipo "Depósito"
-Para:        incrementar el saldo disponible de la cuenta
+Para:        registrar el nuevo saldo resultante del movimiento
 
 Prioridad:   Alta
 Estimación:  M
@@ -47,7 +47,7 @@ CRITERIO-1.1: Depósito exitoso incrementa saldo
   Dado que:  una cuenta con id "1" existe con saldo 1000.00
   Cuando:    registro un movimiento de tipo "Depósito" con valor 500.00
   Entonces:  el movimiento se crea exitosamente
-  Y:         el saldo disponible de la cuenta se actualiza a 1500.00
+  Y:         el movimiento persiste el saldo resultante en 1500.00
   Y:         la fecha del movimiento se registra automáticamente
   Y:         el endpoint retorna status 201
 ```
@@ -80,7 +80,7 @@ CRITERIO-1.3: Rechazo de depósito con valor negativo
 ```
 Como:        Sistema bancario
 Quiero:      Crear un movimiento de tipo "Retiro"
-Para:        disminuir el saldo disponible de la cuenta con validación de fondos
+Para:        registrar el nuevo saldo resultante con validación de fondos
 
 Prioridad:   Alta
 Estimación:  M
@@ -96,7 +96,7 @@ CRITERIO-2.1: Retiro exitoso decrementa saldo
   Dado que:  una cuenta con id "1" existe con saldo 1000.00
   Cuando:    registro un movimiento de tipo "Retiro" con valor 300.00
   Entonces:  el movimiento se crea exitosamente
-  Y:         el saldo disponible se actualiza a 700.00
+  Y:         el movimiento persiste el saldo resultante en 700.00
   Y:         el valor se registra internamente como -300.00
   Y:         la fecha se asigna automáticamente
   Y:         el endpoint retorna status 201
@@ -221,7 +221,8 @@ CRITERIO-4.1: Fecha se asigna automáticamente
 | Entidad | Almacén | Cambios | Descripción |
 |---------|---------|---------|-------------|
 | `Movimiento` | tabla `movimiento` (banking_db) | **nueva** | Registra cada transacción |
-| `Cuenta` | tabla `cuenta` (banking_db) | **modificada** | Campo `saldo_disponible` se actualiza con cada movimiento |
+| `Cuenta` | tabla `cuenta` (banking_db) | sin cambios en saldo disponible | No almacena saldo disponible para evitar duplicidad |
+| `Movimiento` | tabla `movimiento` (banking_db) | **nueva** | Registra cada transacción y el saldo resultante |
 
 #### Campos del modelo Movimiento
 | Campo | Tipo | Obligatorio | Validación | Descripción |
@@ -264,7 +265,7 @@ Según el requerimiento, la respuesta debe incluir los campos legibles:
 - `Saldo Inicial` ← cuenta.saldo_inicial
 - `Estado` ← cuenta.estado
 - `Movimiento` ← movimiento.valor (sin signo negativo, siempre positivo en respuesta)
-- `Saldo Disponible` ← cuenta.saldo_disponible (después del movimiento)
+- `Saldo Disponible` ← movimiento.saldo (saldo resultante después del movimiento)
 
 ---
 
@@ -420,7 +421,7 @@ Según el requerimiento, la respuesta debe incluir los campos legibles:
 > La lógica de validación de saldo insuficiente se implementa en el dominio (`Movimiento.registrar()` o `Cuenta.registrarMovimiento()`), no en el servicio. Esto sigue el patrón de **Domain-Driven Design**.
 >
 > **Atomicidad de Operación**:
-> La creación del movimiento y la actualización de `saldo_disponible` en Cuenta deben ejecutarse en una sola transacción. Usar `@Transactional` en el servicio.
+> La creación del movimiento y el cálculo del saldo resultante deben ejecutarse en una sola transacción. Usar `@Transactional` en el servicio.
 >
 > **Formato de Fecha en Respuesta**:
 > El campo `Fecha` en la respuesta de listado debe convertirse al formato "dd/MM/yyyy" (ej. "10/2/2022"), aunque internamente se almacena como TIMESTAMP UTC.

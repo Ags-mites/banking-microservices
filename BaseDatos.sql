@@ -49,10 +49,8 @@ CREATE TABLE cuenta (
     numero_cuenta VARCHAR(20) NOT NULL UNIQUE,
     tipo_cuenta VARCHAR(20) NOT NULL,
     saldo_inicial DECIMAL(15,2) NOT NULL DEFAULT 0,
-    saldo_disponible DECIMAL(15,2) NOT NULL DEFAULT 0,
     estado BOOLEAN DEFAULT true,
     cliente_id BIGINT NOT NULL,
-    version INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

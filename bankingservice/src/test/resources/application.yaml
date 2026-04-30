@@ -3,10 +3,11 @@ spring:
     name: bankingservice
   datasource:
     url: jdbc:postgresql://localhost:5432/banking_db
-    username: postgres
-    password: password
+    username: banking_user
+    password: banking_pass
     driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
 

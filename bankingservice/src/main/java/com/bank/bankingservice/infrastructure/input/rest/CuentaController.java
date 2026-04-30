@@ -44,7 +44,6 @@ public class CuentaController {
                 createdCuenta.numeroCuenta(),
                 createdCuenta.tipoCuenta(),
                 createdCuenta.saldoInicial(),
-                createdCuenta.saldoDisponible(),
                 createdCuenta.estado(),
                 createdCuenta.clienteId()
         );
@@ -55,7 +54,7 @@ public class CuentaController {
     @GetMapping
     public ResponseEntity<List<CuentaResponse>> getAllAccounts() {
         List<CuentaResponse> responses = cuentaUseCase.getAllAccounts().stream()
-                .map(c -> new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId()))
+            .map(c -> new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.estado(), c.clienteId()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(responses);
@@ -64,7 +63,7 @@ public class CuentaController {
     @GetMapping("/{id}")
     public ResponseEntity<CuentaResponse> getAccountById(@PathVariable Long id) {
         Cuenta c = cuentaUseCase.getAccountById(id);
-        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
+        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.estado(), c.clienteId());
 
         return ResponseEntity.ok(response);
     }
@@ -72,7 +71,7 @@ public class CuentaController {
     @PutMapping("/{id}")
     public ResponseEntity<CuentaResponse> updateAccount(@PathVariable Long id, @RequestBody CuentaUpdateRequest request) {
         Cuenta c = cuentaUseCase.updateAccount(id, request.tipoCuenta(), request.estado());
-        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.saldoDisponible(), c.estado(), c.clienteId());
+        CuentaResponse response = new CuentaResponse(c.id(), c.numeroCuenta(), c.tipoCuenta(), c.saldoInicial(), c.estado(), c.clienteId());
 
         return ResponseEntity.ok(response);
     }

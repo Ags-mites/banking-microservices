@@ -7,7 +7,6 @@ public record CuentaResponse(
     String numeroCuenta,
     String tipoCuenta,
     BigDecimal saldoInicial,
-    BigDecimal saldoDisponible,
     Boolean estado,
     Long clienteId
 ) {}
