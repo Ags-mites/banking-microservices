@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface SpringDataClienteRefRepository extends JpaRepository<ClienteRefEntity, Long> {
     Optional<ClienteRefEntity> findByClienteId(Long clienteId);
+
+    Optional<ClienteRefEntity> findByIdentificacion(String identificacion);
 }

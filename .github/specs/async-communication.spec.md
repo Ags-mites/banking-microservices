@@ -20,7 +20,7 @@ related-specs: []
 
 ### Descripción
 
-Sistema de comunicación asíncrona entre MS-Customer y MS-Banking mediante RabbitMQ. MS-Customer emite eventos cuando se crea o actualiza un cliente. MS-Banking consume estos eventos y mantiene una tabla local `cliente_ref` para garantizar resiliencia, eventual consistency e independencia de esquemas de base de datos.
+Sistema de comunicación asíncrona entre MS-Customer y MS-Banking mediante RabbitMQ. MS-Customer emite eventos cuando se crea o actualiza un cliente. MS-Banking consume estos eventos y mantiene una tabla local `cliente_ref` para garantizar resiliencia, eventual consistency, autonomía para reportes e independencia de esquemas de base de datos.
 
 ### Requerimiento de Negocio
 
@@ -94,6 +94,7 @@ CRITERIO-2.1: Evento recibido y procesado exitosamente
   Cuando:    el evento llega a la cola de MS-Banking
   Entonces:  MS-Banking procesa el evento
   Y:         MS-Banking actualiza su tabla local cliente_ref con los datos
+  Y:         los datos incluyen clienteId, nombre e identificacion
   Y:         el cliente está disponible para crear cuentas inmediatamente
 ```
 
@@ -112,8 +113,9 @@ CRITERIO-2.2: Falla temporal en el procesamiento del evento
 CRITERIO-2.3: Evento duplicado procesado idempotentemente
   Dado que:  MS-Banking ya procesó un evento "cliente.creado" anteriormente
   Cuando:    el mismo evento llega nuevamente (por reintento o desduplicación fallida)
-  Entonces:  MS-Banking actualiza el cliente_ref sin crear duplicados
+  Entonces:  MS-Banking ejecuta un upsert sobre cliente_ref
   Y:         no hay excepción de llave duplicada
+  Y:         el registro final conserva nombre e identificacion sincronizados
 ```
 
 ---
@@ -141,6 +143,7 @@ CRITERIO-3.1: Consultar cliente_ref en MS-Banking
   Entonces:  MS-Banking consulta su propia tabla cliente_ref
   Y:         obtiene los datos del cliente (clienteId, identificacion, nombre)
   Y:         no necesita llamar a MS-Customer directamente
+  Y:         puede generar reportes locales sin depender de customer_db
 ```
 
 **Error Path**
@@ -161,6 +164,39 @@ CRITERIO-3.3: Eventual consistency - delay temporal
   Entonces:  es posible que el cliente_ref no esté sincronizado aún
   Y:         se retorna HTTP 400 con mensaje "Cliente aún no sincronizado, intente nuevamente"
   Y:         el cliente se sincroniza en los próximos segundos
+```
+
+#### HU-06: Generación autónoma de reportes en MS-Banking
+
+```
+Como:        MS-Banking
+Quiero:      generar reportes usando solo su tabla local cliente_ref y cuenta
+Para:        no depender de customer_db para consultas operativas o analíticas
+
+Prioridad:   Alta
+Estimación:  S
+Dependencias: HU-02, HU-03
+Capa:        Backend (Infrastructure + Reporting)
+```
+
+#### Criterios de Aceptación — HU-06
+
+**Happy Path**
+```gherkin
+CRITERIO-6.1: Reporte generado con datos locales
+  Dado que:  existe un cliente sincronizado en cliente_ref
+  Cuando:    MS-Banking genera un reporte de cuentas o movimientos
+  Entonces:  el reporte usa clienteId, nombre e identificacion desde cliente_ref
+  Y:         no realiza consultas a customer_db
+```
+
+**Error Path**
+```gherkin
+CRITERIO-6.2: Reporte sin referencia sincronizada
+  Dado que:  no existe aún el cliente en cliente_ref
+  Cuando:    MS-Banking intenta generar el reporte
+  Entonces:  el sistema responde con el dato faltante como referencia pendiente
+  Y:         no intenta consultar la base de datos de MS-Customer
 ```
 
 ---
@@ -243,8 +279,10 @@ CRITERIO-5.2: Intento de acceso directo entre servicios bloqueado
 2. **Eventual Consistency**: MS-Banking sincronizará cliente_ref de forma asíncrona. Puede haber un delay de hasta 5 segundos.
 3. **Resiliencia**: Si RabbitMQ falla, los eventos se encolan. Cuando se recupera, se procesan sin pérdida.
 4. **Idempotencia**: El mismo evento procesado múltiples veces no debe crear duplicados.
-5. **Reintentos**: Máximo 3 reintentos automáticos antes de enviar a deadletter queue.
-6. **Aislamiento**: MS-Customer no conoce detalles de MS-Banking. Solo emite eventos.
+5. **Replicación de datos**: `cliente_ref` debe almacenar `clienteId`, `nombre` e `identificacion` para habilitar reportes locales autónomos.
+6. **Reintentos**: Máximo 3 reintentos automáticos antes de enviar a deadletter queue.
+7. **Aislamiento**: MS-Customer no conoce detalles de MS-Banking. Solo emite eventos.
+8. **FKs lógicas**: No existen foreign keys físicas entre `customer_db` y `banking_db`; la relación entre ambos servicios es lógica y se materializa por `cliente_id` en eventos y tablas locales.
 
 ---
 
@@ -256,7 +294,7 @@ CRITERIO-5.2: Intento de acceso directo entre servicios bloqueado
 
 | Entidad | Almacén | Cambios | Descripción |
 |---------|---------|---------|-------------|
-| `ClienteRefEntity` | tabla `cliente_ref` en banking_db | **NUEVA** | Referencia local de cliente para MS-Banking |
+| `ClienteRefEntity` | tabla `cliente_ref` en banking_db | **NUEVA** | Referencia local de cliente para MS-Banking y reportes |
 | `ClienteCreadoEvent` | mensaje JSON en RabbitMQ | **NUEVA** | DTO para evento de cliente creado |
 
 #### Campos del modelo — ClienteRefEntity
@@ -275,9 +313,9 @@ CRITERIO-5.2: Intento de acceso directo entre servicios bloqueado
 
 ```java
 public record ClienteCreadoEvent(
-    Long clienteId,           // ID del cliente en customer_db
-    String identificacion,    // Identificación del cliente
-    String nombre             // Nombre del cliente
+  Long clienteId,           // ID del cliente en customer_db
+  String identificacion,    // Identificación del cliente
+  String nombre             // Nombre del cliente
 ) {}
 ```
 
@@ -292,6 +330,7 @@ CREATE INDEX idx_cliente_ref_identificacion ON cliente_ref(identificacion);
 **Justificación:**
 - `cliente_id` UNIQUE: evita duplicados al procesar eventos múltiples veces
 - `identificacion` INDEX: búsqueda rápida por identificación
+- `nombre` se conserva replicado para reportes y consultas locales
 
 ---
 
@@ -304,6 +343,11 @@ CREATE INDEX idx_cliente_ref_identificacion ON cliente_ref(identificacion);
 | Exchange | `customer.events` | Direct | Distribuye eventos de MS-Customer |
 | Queue (MS-Banking) | `cliente.creado.queue` | Durable | Consume eventos de cliente creado |
 | Queue (Deadletter) | `cliente.creado.deadletter.queue` | Durable | Guarda eventos con error tras 3 reintentos |
+
+**Política de reintentos / DLQ**
+- Reintento automático para errores transitorios de persistencia en PostgreSQL, bloqueo de fila o indisponibilidad temporal.
+- Máximo 3 intentos antes de enviar el mensaje a `cliente.creado.deadletter.queue`.
+- Los mensajes fallidos deben conservar payload y metadatos suficientes para reprocesamiento manual.
 
 #### Configuración de Reintentos
 
@@ -319,6 +363,10 @@ spring:
           initial-interval: 1000      # 1 segundo
           max-interval: 10000         # 10 segundos
           multiplier: 2.0
+          retryable-exceptions:
+            - org.springframework.dao.CannotAcquireLockException
+            - org.springframework.dao.DataAccessResourceFailureException
+            - org.springframework.amqp.AmqpConnectException
 ```
 
 ---
@@ -355,7 +403,7 @@ El flujo es completamente **event-driven** via RabbitMQ. Los endpoints existente
 - **Durabilidad:** Queue es durable (persistida en RabbitMQ)
 - **Reintentos:** Máx 3 intentos (configurados en listener)
 - **Deadletter:** Mensajes fallidos van a `cliente.creado.deadletter.queue`
-- **Idempotencia:** MS-Banking valida uniqueness en `cliente_ref.cliente_id`
+- **Idempotencia:** MS-Banking ejecuta upsert sobre `cliente_ref` usando `cliente_id` como clave lógica
 
 ---
 
@@ -374,18 +422,93 @@ El flujo es completamente **event-driven** via RabbitMQ. Los endpoints existente
 
 #### Cambios en BaseDatos.sql
 
-Agregar tabla en `banking_db`:
+Script unificado definitivo:
 
 ```sql
-CREATE TABLE cliente_ref (
-    id BIGSERIAL PRIMARY KEY,
-    cliente_id BIGINT NOT NULL UNIQUE,
-    identificacion VARCHAR(50) NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    version INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+SELECT 'CREATE DATABASE customer_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'customer_db')\gexec
+SELECT 'CREATE DATABASE banking_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'banking_db')\gexec
+
+\c customer_db
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TYPE genero_enum AS ENUM ('MASCULINO', 'FEMENINO', 'OTRO');
+
+CREATE TABLE persona (
+  id BIGSERIAL PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  genero genero_enum,
+  edad INT CHECK (edad >= 0),
+  identificacion VARCHAR(50) NOT NULL UNIQUE,
+  direccion VARCHAR(255),
+  telefono VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE cliente (
+  id BIGSERIAL PRIMARY KEY,
+  persona_id BIGINT NOT NULL UNIQUE,
+  contrasena VARCHAR(255) NOT NULL,
+  estado BOOLEAN DEFAULT true,
+  version INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_cliente_persona
+    FOREIGN KEY (persona_id) REFERENCES persona(id),
+  CONSTRAINT chk_contrasena_largo
+    CHECK (LENGTH(contrasena) >= 8)
+);
+
+\c banking_db
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE cliente_ref (
+  id BIGSERIAL PRIMARY KEY,
+  cliente_id BIGINT NOT NULL UNIQUE,
+  nombre VARCHAR(100) NOT NULL,
+  identificacion VARCHAR(50) NOT NULL,
+  version INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE cuenta (
+  id BIGSERIAL PRIMARY KEY,
+  numero_cuenta VARCHAR(20) NOT NULL UNIQUE,
+  tipo_cuenta VARCHAR(20) NOT NULL,
+  saldo_inicial DECIMAL(15,2) NOT NULL DEFAULT 0,
+  saldo_disponible DECIMAL(15,2) NOT NULL DEFAULT 0,
+  estado BOOLEAN DEFAULT true,
+  version INTEGER NOT NULL DEFAULT 0,
+  cliente_id BIGINT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_cuenta_cliente_ref
+    FOREIGN KEY (cliente_id) REFERENCES cliente_ref(cliente_id)
+);
+
+CREATE TABLE movimiento (
+  id BIGSERIAL PRIMARY KEY,
+  fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  tipo_movimiento VARCHAR(20) NOT NULL,
+  valor DECIMAL(15,2) NOT NULL,
+  saldo DECIMAL(15,2) NOT NULL,
+  cuenta_id BIGINT NOT NULL,
+  transaction_id VARCHAR(100),
+  CONSTRAINT fk_movimiento_cuenta FOREIGN KEY (cuenta_id) REFERENCES cuenta(id),
+  CONSTRAINT chk_movimiento_valor_no_cero CHECK (valor <> 0),
+  CONSTRAINT chk_movimiento_tipo_valido CHECK (tipo_movimiento IN ('Depósito', 'Retiro'))
+);
+
+CREATE INDEX idx_cliente_ref_cliente_id ON cliente_ref (cliente_id);
+CREATE INDEX idx_cliente_ref_identificacion ON cliente_ref (identificacion);
+CREATE INDEX idx_movimiento_fecha ON movimiento (fecha);
+CREATE INDEX idx_movimiento_cuenta_fecha ON movimiento (cuenta_id, fecha DESC);
+
+CREATE UNIQUE INDEX uq_movimiento_transaction_id
+  ON movimiento(transaction_id)
+  WHERE transaction_id IS NOT NULL;
 ```
 
 ---
@@ -393,11 +516,12 @@ CREATE TABLE cliente_ref (
 ### Notas de Implementación
 
 > 1. **ClienteCreadoEventListener** debe estar en MS-Banking, no en MS-Customer.
-> 2. **Idempotencia**: El listener debe usar UPSERT (INSERT ON CONFLICT) para evitar errores con duplicados.
-> 3. **Sincronización inicial**: Si hay clientes históricos en MS-Customer, se debe ejecutar un script de migración inicial antes de activar el listener.
-> 4. **Monitoreo**: Revisar regularmente las deadletter queues para detectar eventos no procesables.
-> 5. **Documentación**: Especificar en README.md de cada servicio qué eventos emite y cuáles consume.
-> 6. **Virtual Threads**: Usar Java 21 Virtual Threads para manejar concurrencia eficientemente.
+> 2. **Idempotencia**: El listener debe usar UPSERT (`INSERT ... ON CONFLICT (cliente_id) DO UPDATE`) para evitar errores con duplicados y mantener sincronizados `nombre` e `identificacion`.
+> 3. **Replicación de datos**: `cliente_ref` debe almacenar `clienteId`, `nombre` e `identificacion`; no depende de consultas directas a customer_db.
+> 4. **Sincronización inicial**: Si hay clientes históricos en MS-Customer, se debe ejecutar un script de migración inicial antes de activar el listener.
+> 5. **Monitoreo**: Revisar regularmente las deadletter queues para detectar eventos no procesables.
+> 6. **Documentación**: Especificar en README.md de cada servicio qué eventos emite y cuáles consume.
+> 7. **Virtual Threads**: Usar Java 21 Virtual Threads para manejar concurrencia eficientemente.
 
 ---
 

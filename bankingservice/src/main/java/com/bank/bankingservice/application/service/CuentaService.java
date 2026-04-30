@@ -2,6 +2,7 @@ package com.bank.bankingservice.application.service;
 
 import com.bank.bankingservice.domain.model.Cuenta;
 import com.bank.bankingservice.domain.ports.in.CuentaUseCase;
+import com.bank.bankingservice.domain.ports.out.ClienteRefRepository;
 import com.bank.bankingservice.domain.ports.out.CuentaRepository;
 import com.bank.bankingservice.domain.exception.AccountValidationException;
 import com.bank.bankingservice.domain.exception.AccountConflictException;
@@ -14,11 +15,11 @@ import java.util.List;
 @Service
 public class CuentaService implements CuentaUseCase {
     private final CuentaRepository repository;
-    private final com.bank.bankingservice.domain.ports.out.ClientVerifier clientVerifier;
+    private final ClienteRefRepository clienteRefRepository;
 
-    public CuentaService(CuentaRepository repository, com.bank.bankingservice.domain.ports.out.ClientVerifier clientVerifier) {
+    public CuentaService(CuentaRepository repository, ClienteRefRepository clienteRefRepository) {
         this.repository = repository;
-        this.clientVerifier = clientVerifier;
+        this.clienteRefRepository = clienteRefRepository;
     }
 
     @Override
@@ -27,8 +28,12 @@ public class CuentaService implements CuentaUseCase {
             throw new AccountConflictException("El número de cuenta ya existe.");
         }
 
-        if (clienteId == null || !clientVerifier.existsById(clienteId)) {
-            throw new AccountValidationException("El cliente con ID " + clienteId + " no existe.");
+        if (clienteId == null) {
+            throw new AccountValidationException("El cliente con ID null no existe.");
+        }
+
+        if (clienteRefRepository.findByClienteId(clienteId).isEmpty()) {
+            throw new AccountValidationException("Cliente aun no sincronizado, intente nuevamente.");
         }
 
         Cuenta cuenta = Cuenta.abrir(clienteId, numeroCuenta, tipoCuenta, saldoInicial);

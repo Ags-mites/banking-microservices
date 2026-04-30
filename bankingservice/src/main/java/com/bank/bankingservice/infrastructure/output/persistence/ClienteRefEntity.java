@@ -26,7 +26,7 @@ public class ClienteRefEntity {
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
-    @Column(name = "identificacion", length = 50)
+    @Column(name = "identificacion", nullable = false, length = 50)
     private String identificacion;
 
     @Version

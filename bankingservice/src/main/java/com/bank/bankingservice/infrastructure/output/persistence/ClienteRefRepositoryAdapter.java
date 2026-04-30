@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Repository
 public class ClienteRefRepositoryAdapter implements ClienteRefRepository {
 
@@ -20,6 +22,28 @@ public class ClienteRefRepositoryAdapter implements ClienteRefRepository {
     @Override
     public Optional<ClienteRef> findByClienteId(Long clienteId) {
         return springDataRepository.findByClienteId(clienteId).map(this::toDomain);
+    }
+
+    @Override
+    public Optional<ClienteRef> findByIdentificacion(String identificacion) {
+        return springDataRepository.findByIdentificacion(identificacion).map(this::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public ClienteRef upsert(Long clienteId, String nombre, String identificacion) {
+        ClienteRefEntity entity = springDataRepository.findByClienteId(clienteId)
+                .orElseGet(() -> {
+                    ClienteRefEntity newEntity = new ClienteRefEntity();
+                    newEntity.setClienteId(clienteId);
+                    return newEntity;
+                });
+
+        entity.setNombre(nombre);
+        entity.setIdentificacion(identificacion);
+
+        ClienteRefEntity persisted = springDataRepository.save(entity);
+        return toDomain(persisted);
     }
 
     private ClienteRef toDomain(ClienteRefEntity entity) {

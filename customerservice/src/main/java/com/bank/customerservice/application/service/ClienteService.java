@@ -77,10 +77,8 @@ public class ClienteService implements ClienteUseCase {
         
         ClienteCreadoEvent event = new ClienteCreadoEvent(
             clienteGuardado.id(),
-            personaGuardada.nombre(),
             personaGuardada.identificacion(),
-            clienteGuardado.estado(),
-            LocalDateTime.ofInstant(clienteGuardado.createdAt(), ZoneId.of("UTC"))
+            personaGuardada.nombre()
         );
         try {
             eventPublisher.publicarClienteCreadoEvent(event);
