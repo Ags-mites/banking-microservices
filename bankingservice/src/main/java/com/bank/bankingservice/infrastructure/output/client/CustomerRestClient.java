@@ -14,7 +14,7 @@ public class CustomerRestClient implements ClientVerifier, ClienteLookup {
     private final RestTemplate restTemplate = new RestTemplate();
     private final String baseUrl;
 
-    public CustomerRestClient(@Value("${customerservice.base-url:http://localhost:8081}") String baseUrl) {
+    public CustomerRestClient(@Value("${CUSTOMERSERVICE_BASE_URL:http://localhost:8081}") String baseUrl) {
         this.baseUrl = baseUrl;
     }
 
