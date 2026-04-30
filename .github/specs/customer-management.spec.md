@@ -1042,83 +1042,83 @@ public record ErrorResponse(
 #### Implementación
 
 **Domain**
-- [ ] Crear `domain/model/Persona.java` — entidad JPA mapeada a tabla persona
-- [ ] Crear `domain/model/Cliente.java` — entidad JPA mapeada a tabla cliente con @Version
-- [ ] Crear `domain/model/GeneroEnum.java` — enum para valores MASCULINO/FEMENINO/OTRO
-- [ ] Crear `domain/ports/ClienteRepositoryPort.java` — interfaz del puerto de salida (abstracción)
-- [ ] Crear `domain/ports/ClientePublisherPort.java` — interfaz para emitir eventos RabbitMQ
-- [ ] Crear excepciones en `domain/exception/`:
-  - [ ] `PersonaNotFoundException.java`
-  - [ ] `ClienteNotFoundException.java`
-  - [ ] `DuplicateIdentificationException.java`
-  - [ ] `InvalidPasswordException.java`
+- [x] Crear `domain/model/Persona.java` — entidad JPA mapeada a tabla persona
+- [x] Crear `domain/model/Cliente.java` — entidad JPA mapeada a tabla cliente con @Version
+- [x] Crear `domain/model/GeneroEnum.java` — enum para valores MASCULINO/FEMENINO/OTRO
+- [x] Crear `domain/ports/ClienteRepositoryPort.java` — interfaz del puerto de salida (abstracción)
+- [x] Crear `domain/ports/ClientePublisherPort.java` — interfaz para emitir eventos RabbitMQ
+- [x] Crear excepciones en `domain/exception/`:
+  - [x] `PersonaNotFoundException.java`
+  - [x] `ClienteNotFoundException.java`
+  - [x] `DuplicateIdentificationException.java`
+  - [x] `InvalidPasswordException.java`
 
 **Application (DTOs + Service)**
-- [ ] Crear `application/dto/ClienteCreateRequest.java`
-- [ ] Crear `application/dto/ClienteUpdateRequest.java`
-- [ ] Crear `application/dto/ClientePatchRequest.java`
-- [ ] Crear `application/dto/ClienteResponse.java` (SIN campo contrasena)
-- [ ] Crear `application/dto/PersonaCreateRequest.java`
-- [ ] Crear `application/dto/PersonaResponse.java`
-- [ ] Crear `application/usecase/ClienteService.java` (@Service)
-  - [ ] Implementar método `createCliente(ClienteCreateRequest)` → ClienteResponse + emite evento
-  - [ ] Implementar método `getAllClientes()` → List<ClienteResponse>
-  - [ ] Implementar método `getClienteById(Long)` → ClienteResponse
-  - [ ] Implementar método `updateCliente(Long, ClienteUpdateRequest)` → ClienteResponse
-  - [ ] Implementar método `patchCliente(Long, ClientePatchRequest)` → ClienteResponse
-  - [ ] Implementar método `deleteCliente(Long)` → void
-  - [ ] Validaciones: identificación única, contraseña min 8 chars, persona existe
+- [x] Crear `application/dto/ClienteCreateRequest.java`
+- [x] Crear `application/dto/ClienteUpdateRequest.java`
+- [x] Crear `application/dto/ClientePatchRequest.java`
+- [x] Crear `application/dto/ClienteResponse.java` (SIN campo contrasena)
+- [x] Crear `application/dto/PersonaCreateRequest.java`
+- [x] Crear `application/dto/PersonaResponse.java`
+- [x] Crear `application/usecase/ClienteService.java` (@Service)
+  - [x] Implementar método `createCliente(ClienteCreateRequest)` → ClienteResponse + emite evento
+  - [x] Implementar método `getAllClientes()` → List<ClienteResponse>
+  - [x] Implementar método `getClienteById(Long)` → ClienteResponse
+  - [x] Implementar método `updateCliente(Long, ClienteUpdateRequest)` → ClienteResponse
+  - [x] Implementar método `patchCliente(Long, ClientePatchRequest)` → ClienteResponse
+  - [x] Implementar método `deleteCliente(Long)` → void
+  - [x] Validaciones: identificación única, contraseña min 8 chars, persona existe
 
 **Infrastructure — Input (REST)**
-- [ ] Crear `infrastructure/input/ClienteController.java` (@RestController)
-- [ ] POST /api/clientes — mapea a ClienteService.createCliente()
-- [ ] GET /api/clientes — mapea a ClienteService.getAllClientes()
-- [ ] GET /api/clientes/{id} — mapea a ClienteService.getClienteById()
-- [ ] PUT /api/clientes/{id} — mapea a ClienteService.updateCliente()
-- [ ] PATCH /api/clientes/{id} — mapea a ClienteService.patchCliente()
-- [ ] DELETE /api/clientes/{id} — mapea a ClienteService.deleteCliente()
-  - [ ] Usar constructor injection para servicios
-  - [ ] Respuestas HTTP con códigos: 201, 200, 204, 400, 404, 409
-- [ ] Crear `infrastructure/input/GlobalExceptionHandler.java` (@ControllerAdvice)
-  - [ ] Implementar @ExceptionHandler para PersonaNotFoundException (404)
-  - [ ] Implementar @ExceptionHandler para DuplicateIdentificationException (409)
-  - [ ] Implementar @ExceptionHandler para ClienteNotFoundException (404)
-  - [ ] Implementar @ExceptionHandler para InvalidPasswordException (400)
-  - [ ] Implementar @ExceptionHandler para IllegalArgumentException (400)
-  - [ ] Formatear respuestas con ErrorResponse según RFC 9457
-  - [ ] Incluir timestamp en formato dd/MM/yyyy HH:mm:ss
-- [ ] Crear `infrastructure/input/ErrorResponse.java` (DTO)
-  - [ ] Campos: type, title, status, detail, instance, timestamp
-  - [ ] Usar @JsonProperty para serialización correcta
+- [x] Crear `infrastructure/input/ClienteController.java` (@RestController)
+- [x] POST /api/clientes — mapea a ClienteService.createCliente()
+- [x] GET /api/clientes — mapea a ClienteService.getAllClientes()
+- [x] GET /api/clientes/{id} — mapea a ClienteService.getClienteById()
+- [x] PUT /api/clientes/{id} — mapea a ClienteService.updateCliente()
+- [x] PATCH /api/clientes/{id} — mapea a ClienteService.patchCliente()
+- [x] DELETE /api/clientes/{id} — mapea a ClienteService.deleteCliente()
+  - [x] Usar constructor injection para servicios
+  - [x] Respuestas HTTP con códigos: 201, 200, 204, 400, 404, 409
+- [x] Crear `infrastructure/input/GlobalExceptionHandler.java` (@ControllerAdvice)
+  - [x] Implementar @ExceptionHandler para PersonaNotFoundException (404)
+  - [x] Implementar @ExceptionHandler para DuplicateIdentificationException (409)
+  - [x] Implementar @ExceptionHandler para ClienteNotFoundException (404)
+  - [x] Implementar @ExceptionHandler para InvalidPasswordException (400)
+  - [x] Implementar @ExceptionHandler para IllegalArgumentException (400)
+  - [x] Formatear respuestas con ErrorResponse según RFC 9457
+  - [x] Incluir timestamp en formato dd/MM/yyyy HH:mm:ss
+- [x] Crear `infrastructure/input/ErrorResponse.java` (DTO)
+  - [x] Campos: type, title, status, detail, instance, timestamp
+  - [x] Usar @JsonProperty para serialización correcta
 
 **Infrastructure — Output (Persistence)**
-- [ ] Crear `infrastructure/output/ClienteJpaRepository.java` (@Repository) extends JpaRepository<Cliente, Long>
-  - [ ] Método `Optional<Cliente> findById(Long id)`
-  - [ ] Método `Optional<Cliente> findByPersonaId(Long personaId)`
-- [ ] Crear `infrastructure/output/PersonaJpaRepository.java` (@Repository) extends JpaRepository<Persona, Long>
-  - [ ] Método `Optional<Persona> findByIdentificacion(String identificacion)`
-- [ ] Crear `infrastructure/output/ClienteRepositoryAdapter.java` — implementa ClienteRepositoryPort
-  - [ ] Inyectar ClienteJpaRepository y PersonaJpaRepository
-  - [ ] Implementar métodos save, findById, findAll, update, delete
-  - [ ] Validar duplicado de identificación en PersonaJpaRepository antes de crear
+- [x] Crear `infrastructure/output/ClienteJpaRepository.java` (@Repository) extends JpaRepository<Cliente, Long>
+  - [x] Método `Optional<Cliente> findById(Long id)`
+  - [x] Método `Optional<Cliente> findByPersonaId(Long personaId)`
+- [x] Crear `infrastructure/output/PersonaJpaRepository.java` (@Repository) extends JpaRepository<Persona, Long>
+  - [x] Método `Optional<Persona> findByIdentificacion(String identificacion)`
+- [x] Crear `infrastructure/output/ClienteRepositoryAdapter.java` — implementa ClienteRepositoryPort
+  - [x] Inyectar ClienteJpaRepository y PersonaJpaRepository
+  - [x] Implementar métodos save, findById, findAll, update, delete
+  - [x] Validar duplicado de identificación en PersonaJpaRepository antes de crear
 
 **Infrastructure — Output (RabbitMQ)**
-- [ ] Crear `infrastructure/output/ClientePublisherAdapter.java` — implementa ClientePublisherPort
-  - [ ] Inyectar `RabbitTemplate`
-  - [ ] Método `publishClienteCreadoEvent(ClienteCreadoEvent)` — envia a exchange `customer.events`
-  - [ ] Usar `@Async` para no bloquear respuesta HTTP
-- [ ] Crear `infrastructure/config/RabbitMQConfig.java` (@Configuration)
-  - [ ] Definir Exchange: `customer.events` (topic)
-  - [ ] Definir Queue: `cliente.creado`
-  - [ ] Definir Binding entre queue y exchange con routing key `cliente.creado`
-  - [ ] Serialización JSON de eventos con `Jackson`
+- [x] Crear `infrastructure/output/ClientePublisherAdapter.java` — implementa ClientePublisherPort
+  - [x] Inyectar `RabbitTemplate`
+  - [x] Método `publishClienteCreadoEvent(ClienteCreadoEvent)` — envia a exchange `customer.events`
+  - [x] Usar `@Async` para no bloquear respuesta HTTP
+- [x] Crear `infrastructure/config/RabbitMQConfig.java` (@Configuration)
+  - [x] Definir Exchange: `customer.events` (topic)
+  - [x] Definir Queue: `cliente.creado`
+  - [x] Definir Binding entre queue y exchange con routing key `cliente.creado`
+  - [x] Serialización JSON de eventos con `Jackson`
 
 **Configuration**
-- [ ] Actualizar `application.yaml`:
-  - [ ] Agregar RabbitMQ host, port, username, password (desde env vars)
-  - [ ] Habilitar virtual threads: `spring.threads.virtual.enabled: true`
-  - [ ] Configurar schema: `spring.datasource.hikari.schema=customer_db`
-  - [ ] JPA: `spring.jpa.hibernate.ddl-auto: validate` (NO update)
+- [x] Actualizar `application.yaml`:
+  - [x] Agregar RabbitMQ host, port, username, password (desde env vars)
+  - [x] Habilitar virtual threads: `spring.threads.virtual.enabled: true`
+  - [x] Configurar schema: `spring.datasource.hikari.schema=customer_db`
+  - [x] JPA: `spring.jpa.hibernate.ddl-auto: validate` (NO update)
 
 #### Tests Backend (Matriz 2-2-1 — Pragmática)
 

@@ -15,41 +15,24 @@ import com.bank.customerservice.infrastructure.output.persistence.PersonaReposit
 import com.bank.customerservice.infrastructure.output.security.BCryptPasswordEncoder;
 import com.bank.customerservice.application.service.ClienteService;
 
-/**
- * Configuración de wiring de dependencias siguiendo arquitectura hexagonal
- * Conecta Domain Layer, Application Layer e Infrastructure Layer
- */
 @Configuration
 public class ApplicationConfig {
     
-    /**
-     * Bean: PasswordHasher — implementación con BCrypt
-     */
     @Bean
     public PasswordHasher passwordHasher() {
         return new BCryptPasswordEncoder();
     }
     
-    /**
-     * Bean: PersonaRepository — adaptador para persistencia
-     */
     @Bean
     public PersonaRepository personaRepository(PersonaJpaRepository jpaRepository) {
         return new PersonaRepositoryAdapter(jpaRepository);
     }
     
-    /**
-     * Bean: ClienteRepository — adaptador para persistencia
-     */
     @Bean
     public ClienteRepository clienteRepository(ClienteJpaRepository jpaRepository) {
         return new ClienteRepositoryAdapter(jpaRepository);
     }
     
-    /**
-     * Bean: ClienteUseCase — servicio de aplicación
-     * Orquesta operaciones sobre Cliente y Persona
-     */
     @Bean
     public ClienteUseCase clienteUseCase(
             ClienteRepository clienteRepository,
