@@ -1,9 +1,11 @@
 package com.bank.bankingservice.infrastructure.output.persistence;
 
 import com.bank.bankingservice.domain.model.Movimiento;
+import com.bank.bankingservice.domain.model.MovimientoReporte;
 import com.bank.bankingservice.domain.ports.out.MovimientoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -46,6 +48,14 @@ public class MovimientoRepositoryAdapter implements MovimientoRepository {
         return movimientos;
     }
 
+    @Override
+    public List<MovimientoReporte> findReporteByClienteIdAndFechaBetween(Long clienteId, LocalDateTime start, LocalDateTime end) {
+        return springDataRepository.findReporteByClienteIdAndFechaBetween(clienteId, start, end)
+                .stream()
+                .map(this::toDomainReporte)
+                .collect(Collectors.toList());
+    }
+
     private boolean isWithinRange(Movimiento movimiento, LocalDate from, LocalDate to) {
         if (movimiento.fecha() == null) {
             return false;
@@ -68,5 +78,18 @@ public class MovimientoRepositoryAdapter implements MovimientoRepository {
         }
         int endIndex = Math.min(movimientos.size(), safeOffset + safeLimit);
         return movimientos.subList(safeOffset, endIndex);
+    }
+
+    private MovimientoReporte toDomainReporte(MovimientoReporteProjection projection) {
+        return MovimientoReporte.reconstituir(
+                projection.getFecha() != null ? projection.getFecha().toInstant(ZoneOffset.UTC) : null,
+                projection.getCliente(),
+                projection.getNumeroCuenta(),
+                projection.getTipo(),
+                projection.getSaldoInicial(),
+                projection.getEstado(),
+                projection.getMovimiento(),
+                projection.getSaldoDisponible()
+        );
     }
 }

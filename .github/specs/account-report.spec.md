@@ -1,32 +1,33 @@
 ---
 id: SPEC-005
-status: DRAFT
+status: APPROVED
 feature: account-report
 created: 2026-04-29
-updated: 2026-04-29
+updated: 2026-04-30
 author: spec-generator
-version: "1.0"
-related-specs: []
+version: "2.0"
+related-specs: [SPEC-006]
 ---
 
-# Spec: Reporte de Estado de Cuenta
+# Spec: Reporte de Estado de Cuenta (Refactorización — Eventual Consistency)
 
 > **Estado:** `DRAFT` → aprobar con `status: APPROVED` antes de iniciar implementación.
 > **Ciclo de vida:** DRAFT → APPROVED → IN_PROGRESS → IMPLEMENTED → DEPRECATED
+> **Cambio Major — v2.0**: Arquitectura desacoplada vía RabbitMQ + JOIN local con `cliente_ref` (SPEC-006)
 
 ---
 
 ## 1. REQUERIMIENTOS
 
 ### Descripción
-Funcionalidad que permite a los clientes consultar un reporte detallado de sus movimientos por rango de fechas. El reporte agrupa todas las cuentas del cliente con sus movimientos filtrados en el rango de fechas especificado, proporcionando una vista auditable de las finanzas.
+Funcionalidad que permite a los clientes consultar un reporte detallado de sus movimientos por rango de fechas. El reporte realiza un **JOIN local** entre `movimiento` y `cliente_ref` (tabla sincronizada vía RabbitMQ desde MS-Customer), eliminando la dependencia síncrona hacia otro microservicio. Responde con un **array plano** de movimientos en formato Excel-friendly con llaves en español.
 
 ### Requerimiento de Negocio
-Ver [account-report.md](../requirements/account-report.md) — HU-005: Reporte de Estado de Cuenta
+Ver [account-report.md](../requirements/account-report.md) — HU-005: Reporte de Estado de Cuenta (Refactorizado con Eventual Consistency)
 
 ### Historias de Usuario
 
-#### HU-005: Reporte de Estado de Cuenta
+#### HU-005: Reporte de Estado de Cuenta (Eventual Consistency)
 
 ```
 Como:        Cliente autenticado
@@ -35,51 +36,38 @@ Para:        Auditar y verificar mis transacciones financieras
 
 Prioridad:   Alta
 Estimación:  M
-Dependencias: Ninguna (requiere que Cliente y Cuenta existan)
+Dependencias: SPEC-006 (tabla cliente_ref sincronizada)
 Capa:        Backend + API REST
 ```
 
 #### Criterios de Aceptación — HU-005
 
-**Happy Path — Obtener reporte con múltiples cuentas**
+**Happy Path — Array de movimientos exitoso**
 ```gherkin
-CRITERIO-5.1: Reporte exitoso para cliente con múltiples cuentas
-  Dado que:  un cliente con id "1" existe y tiene 2 cuentas asociadas con movimientos
-  Cuando:    realizo GET a `/api/reportes?cliente=1&fecha=2022-01-01,2022-12-31`
+CRITERIO-5.1: Reporte exitoso con múltiples movimientos
+  Dado que:  un cliente con id "1" existe en cliente_ref y tiene movimientos en rango
+  Cuando:    realizo GET a `/api/reportes?fecha=01/01/2022,31/12/2022&cliente=1`
   Entonces:  retorna 200 OK
-  Y:        la respuesta contiene estructura JSON con "cliente" y "cuentas"
-  Y:        cada cuenta incluye sus movimientos dentro del rango de fechas
-  Y:        el saldo_disponible en cada movimiento refleja el estado de la cuenta
+  Y:         la respuesta es un array JSON con cada movimiento como objeto
+  Y:         cada objeto contiene: Fecha, Cliente, Numero Cuenta, Tipo, Saldo Inicial, Estado, Movimiento, Saldo Disponible
+  Y:         las fechas están en formato dd/MM/yyyy
 ```
 
 **Happy Path — Reporte con estructura exacta**
 ```gherkin
 CRITERIO-5.2: Estructura JSON del reporte es correcta
-  Dado que:  un cliente "Jose Lema" (id 1) tiene una cuenta "478758" tipo "Ahorro"
+  Dado que:  un cliente "Jose Lema" (id 1) tiene un movimiento de -575 en cuenta "478758"
   Cuando:    consulto el reporte para ese cliente
-  Entonces:  la respuesta tiene estructura:
+  Entonces:  la respuesta es un array cuyos elementos tienen la siguiente forma (llaves exactas en español):
              {
-               "cliente": { "id": 1, "nombre": "Jose Lema" },
-               "cuentas": [
-                 {
-                   "numeroCuenta": "478758",
-                   "tipo": "Ahorro",
-                   "saldo": 2000.00,
-                   "estado": true,
-                   "movimientos": [
-                     {
-                       "fecha": "2022-02-10",
-                       "cliente": "Jose Lema",
-                       "numeroCuenta": "478758",
-                       "tipo": "Ahorro",
-                       "saldoInicial": 2000,
-                       "estado": true,
-                       "movimiento": -575,
-                       "saldoDisponible": 1425
-                     }
-                   ]
-                 }
-               ]
+               "Fecha": "10/02/2022",
+               "Cliente": "Jose Lema",
+               "Numero Cuenta": "478758",
+               "Tipo": "Ahorro",
+               "Saldo Inicial": 2000,
+               "Estado": true,
+               "Movimiento": -575,
+               "Saldo Disponible": 1425
              }
 ```
 
@@ -134,19 +122,19 @@ CRITERIO-5.7: Validación de parámetro fecha obligatorio
 **Error Path — Formato de fecha inválido**
 ```gherkin
 CRITERIO-5.8: Validación del formato de fecha
-  Dado que:  el sistema acepta fechas en formato "yyyy-MM-dd"
-  Cuando:    realizo GET a `/api/reportes?cliente=1&fecha=01/01/2022,31/12/2022`
+  Dado que:  el sistema acepta fechas en formato "dd/MM/yyyy"
+  Cuando:    realizo GET a `/api/reportes?cliente=1&fecha=01-01-2022,31-12-2022`
   Entonces:  retorna 400 Bad Request
-  Y:        el detail indica: "Invalid date format. Expected yyyy-MM-dd"
+  Y:        el detail indica: "Invalid date format. Expected dd/MM/yyyy"
 ```
 
-**Error Path — Cliente no encontrado**
+**Error Path — Cliente no encontrado en cliente_ref**
 ```gherkin
-CRITERIO-5.9: Cliente inexistente
-  Dado que:  no existe cliente con id "9999"
-  Cuando:    realizo GET a `/api/reportes?cliente=9999&fecha=2022-01-01,2022-12-31`
+CRITERIO-5.9: Cliente inexistente en tabla local
+  Dado que:  no existe cliente con id "9999" en la tabla `cliente_ref`
+  Cuando:    realizo GET a `/api/reportes?cliente=9999&fecha=01/01/2022,31/12/2022`
   Entonces:  retorna 404 Not Found
-  Y:        el detail indica: "Client with id 9999 not found"
+  Y:        el detail indica: "Client with id 9999 not found in local registry"
 ```
 
 **Edge Case — Fecha inicio posterior a fecha fin**
@@ -159,14 +147,15 @@ CRITERIO-5.10: Validación de rango de fechas válido
 ```
 
 ### Reglas de Negocio
-1. **Parámetros obligatorios**: cliente y fecha son requeridos en la query string
-2. **Formato de fecha**: debe ser "yyyy-MM-dd,yyyy-MM-dd" (rango separado por coma)
+1. **Parámetros obligatorios**: `cliente` y `fecha` son requeridos en la query string
+2. **Formato de fecha**: debe ser `dd/MM/yyyy,dd/MM/yyyy` (rango separado por coma)
 3. **Rango válido**: fecha inicio ≤ fecha fin
 4. **Filtro temporal**: solo incluir movimientos con `fecha >= inicio AND fecha <= fin`
-5. **Dato de cliente**: obtener nombre del cliente desde customerservice
-6. **Cuentas incluidas**: todas las cuentas activas e inactivas del cliente
-7. **Saldo en movimiento**: reflejar el saldo disponible después del movimiento
-8. **Unicidad**: no duplicar movimientos en el reporte
+5. **Dato de cliente**: obtener nombre del cliente desde tabla local `cliente_ref` (sincronizada vía RabbitMQ)
+6. **Sin dependencia síncrona**: NO usar RestTemplate/WebClient hacia MS-Customer
+7. **Array plano**: estructura de respuesta es un array de objetos (no anidado)
+8. **Llaves exactas en español**: `Fecha`, `Cliente`, `Numero Cuenta`, `Tipo`, `Saldo Inicial`, `Estado`, `Movimiento`, `Saldo Disponible`
+9. **Eventual Consistency**: Si cliente no está en `cliente_ref` aún, retornar 404 (no reintentar automáticamente)
 
 ---
 
@@ -178,10 +167,9 @@ CRITERIO-5.10: Validación de rango de fechas válido
 
 | Entidad | Almacén | Cambios | Descripción |
 |---------|---------|---------|-------------|
-| `Movimiento` | tabla `movimiento` (banking_db) | nueva entidad de dominio | Captura cada transacción en una cuenta |
+| `Movimiento` | tabla `movimiento` (banking_db) | existente | Captura cada transacción en una cuenta |
+| `ClienteRef` | tabla `cliente_ref` (banking_db) | **nueva tabla** | Copia local sincronizada de cliente (SPEC-006) |
 | `Cuenta` | tabla `cuenta` (banking_db) | sin cambios | Cuentas existentes |
-| `Cliente` | tabla `cliente` (customer_db) | sin cambios | Clientes existentes |
-| `ReporteEstadoCuenta` | no aplica (DTO) | nueva | Modelo de respuesta del reporte |
 
 #### Campos del modelo — Movimiento (Entity + Domain)
 
@@ -194,37 +182,35 @@ CRITERIO-5.10: Validación de rango de fechas válido
 | `saldo` | BigDecimal | sí | >= 0 | Saldo de la cuenta después del movimiento |
 | `cuentaId` | BigInt | sí | FK a cuenta.id | Referencia a la cuenta |
 
+#### Tabla `cliente_ref` (sincronizada vía RabbitMQ — SPEC-006)
+
+```sql
+CREATE TABLE cliente_ref (
+  id BIGSERIAL PRIMARY KEY,
+  cliente_id BIGINT NOT NULL UNIQUE,
+  nombre VARCHAR(100) NOT NULL,
+  identificacion VARCHAR(50),
+  version INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_cliente_ref_cliente_id ON cliente_ref(cliente_id);
+```
+
 #### DTOs de Respuesta
 
-**ReporteEstadoCuentaResponse**
+**ReporteEstadoCuentaResponse** (Array plano de `MovimientoReporteDto`)
 ```java
-public record ReporteEstadoCuentaResponse(
-    ClienteResumenDto cliente,
-    List<CuentaConMovimientosDto> cuentas
-) {}
-
-public record ClienteResumenDto(
-    Long id,
-    String nombre
-) {}
-
-public record CuentaConMovimientosDto(
-    String numeroCuenta,
-    String tipo,        // tipo_cuenta → campo "tipo"
-    BigDecimal saldo,   // saldo_disponible
-    Boolean estado,
-    List<MovimientoDto> movimientos
-) {}
-
-public record MovimientoDto(
-    LocalDate fecha,
-    String cliente,
-    String numeroCuenta,
-    String tipo,         // tipo_cuenta
-    BigDecimal saldoInicial,
-    Boolean estado,
-    BigDecimal movimiento,
-    BigDecimal saldoDisponible
+public record MovimientoReporteDto(
+  String Fecha,              // Formato dd/MM/yyyy
+  String Cliente,            // Nombre del cliente desde cliente_ref
+  String NumeroCuenta,       // "Numero Cuenta"
+  String Tipo,               // tipo_cuenta
+  BigDecimal SaldoInicial,   // "Saldo Inicial"
+  Boolean Estado,            // Estado de la cuenta
+  BigDecimal Movimiento,     // Valor del movimiento (puede ser negativo)
+  BigDecimal SaldoDisponible // "Saldo Disponible" (saldo después del movimiento)
 ) {}
 ```
 
@@ -232,46 +218,30 @@ public record MovimientoDto(
 - **Índice en `movimiento.cuenta_id`**: búsquedas frecuentes por cuenta
 - **Índice en `movimiento.fecha`**: filtros por rango de fechas
 - **Índice compuesto `(cuenta_id, fecha)`**: optimización de búsquedas combinadas
+- **Índice en `cliente_ref.cliente_id`**: búsqueda por cliente
 
 ### API Endpoints
 
 #### GET /api/reportes
-- **Descripción**: Obtiene el reporte de estado de cuenta para un cliente en un rango de fechas
-- **Auth requerida**: sí (implementar en futuro)
+- **Descripción**: Obtiene el reporte de estado de cuenta para un cliente en un rango de fechas. Realiza **JOIN local** entre `movimiento`, `cuenta` y `cliente_ref`.
+- **Auth requerida**: sí (futuro)
 - **Query Parameters**:
   - `cliente` (Long, obligatorio): ID del cliente
-  - `fecha` (String, obligatorio): Rango en formato "yyyy-MM-dd,yyyy-MM-dd"
-- **Response 200 OK**:
+  - `fecha` (String, obligatorio): Rango en formato `dd/MM/yyyy,dd/MM/yyyy`
+- **Response 200 OK**: Array de `MovimientoReporteDto` (llaves exactas en español)
   ```json
-  {
-    "data": {
-      "cliente": {
-        "id": 1,
-        "nombre": "Jose Lema"
-      },
-      "cuentas": [
-        {
-          "numeroCuenta": "478758",
-          "tipo": "Ahorro",
-          "saldo": 2000.00,
-          "estado": true,
-          "movimientos": [
-            {
-              "fecha": "2022-02-10",
-              "cliente": "Jose Lema",
-              "numeroCuenta": "478758",
-              "tipo": "Ahorro",
-              "saldoInicial": 2000,
-              "estado": true,
-              "movimiento": -575,
-              "saldoDisponible": 1425
-            }
-          ]
-        }
-      ]
-    },
-    "timestamp": "2026-04-29T10:30:00Z"
-  }
+  [
+    {
+      "Fecha": "10/02/2022",
+      "Cliente": "Jose Lema",
+      "Numero Cuenta": "478758",
+      "Tipo": "Ahorro",
+      "Saldo Inicial": 2000,
+      "Estado": true,
+      "Movimiento": -575,
+      "Saldo Disponible": 1425
+    }
+  ]
   ```
 - **Response 400 Bad Request**: parámetros ausentes, formato inválido o rango inválido
   ```json
@@ -306,8 +276,8 @@ public record MovimientoDto(
 - `com.bank.bankingservice.infrastructure.output.persistence.MovimientoRepository` (JPA)
 
 **Dependencias externas:**
-- `customerservice` vía HTTP (para obtener datos del cliente por ID)
-- BD `banking_db` (lectura de movimientos)
+- **RabbitMQ** (consumidor de eventos `cliente.creado` y `cliente.actualizado` — ver SPEC-006)
+- BD `banking_db` (lectura de movimientos y tabla `cliente_ref`)
 
 **Impacto en punto de entrada:**
 - Registrar `ReporteEstadoCuentaService` como bean en contexto Spring
@@ -315,11 +285,12 @@ public record MovimientoDto(
 - No es necesario modificar `BankingserviceApplication.java` si se usan anotaciones `@Service`, `@Repository`, `@Component`
 
 ### Notas de Implementación
-- **No crear Movimiento vacío**: Los movimientos se crean cuando hay transacciones (futuros depósitos/retiros).
-- **Llamada síncrona a customerservice**: Implementar con RestTemplate o WebClient para obtener nombre del cliente.
-- **Reporte como lectura**: Solo lectura de BD, sin crear nuevos movimientos.
-- **Filtrado en Java**: Filtrar movimientos por rango de fechas en el service (no en SQL).
-- **Saldo inicial del movimiento**: Es el saldo de la cuenta antes de ese movimiento (calcular restando el valor del movimiento al saldo actual).
+- **Tabla cliente_ref**: Creada y sincronizada por SPEC-006 vía RabbitMQ. SPEC-005 solo la **lee**.
+- **Query SQL**: Realizar una consulta con JOIN entre `movimiento`, `cuenta` y `cliente_ref` para obtener los campos necesarios en una sola pasada.
+- **Formato de fecha**: Conversión de `LocalDateTime` → String con patrón `dd/MM/yyyy` usando `DateTimeFormatter.ofPattern("dd/MM/yyyy")`.
+- **Saldo inicial del movimiento**: Es el saldo de la cuenta antes del movimiento (calcular: `saldoDisponible - valorMovimiento` si saldoDisponible representa after-move).
+- **Resiliencia**: Si `cliente_ref` no tiene el cliente, retornar 404 (validación falla, no reintentar automáticamente).
+- **Array plano**: Respuesta es `List<MovimientoReporteDto>` con llaves exactas en español.
 
 ---
 
@@ -330,15 +301,32 @@ public record MovimientoDto(
 ### Backend
 
 #### Implementación
+- [ ] **Prerequisito**: SPEC-006 implementado (tabla `cliente_ref` + consumer de RabbitMQ)
 - [ ] Crear domain model `Movimiento` con factory methods en `domain/model/`
-- [ ] Crear port de salida `ClienteGateway` interface en `domain/ports/out/`
-- [ ] Crear DTOs (records) en `application/dto/`: `ReporteEstadoCuentaResponse`, `ClienteResumenDto`, `CuentaConMovimientosDto`, `MovimientoDto`
-- [ ] Implementar `ReporteEstadoCuentaService` con lógica en `application/service/` (orquestar flujo, validar parámetros, filtrar movimientos)
+- [ ] Crear domain model `ClienteRef` (lectura simple) en `domain/model/`
+- [ ] Crear DTO `MovimientoReporteDto` (record) en `application/dto/`
+- [ ] Implementar `ReporteEstadoCuentaService` en `application/service/`:
+  - [ ] Validar parámetros: `cliente`, `fecha` (obligatorios)
+  - [ ] Parsear fecha en formato `dd/MM/yyyy` (usar `DateTimeFormatter`)
+  - [ ] Validar rango (inicio ≤ fin)
+  - [ ] Query con JOIN: SELECT de `movimiento` + `cuenta` + `cliente_ref`
+  - [ ] Filtrar por rango de fechas
+  - [ ] Convertir resultado a `List<MovimientoReporteDto>`
+  - [ ] Mapear llaves exactas en español
 - [ ] Implementar `MovimientoRepository` JPA en `infrastructure/output/persistence/`
-- [ ] Implementar `ClienteGatewayAdapter` en `infrastructure/output/adapter/` (REST call a customerservice)
+  - [ ] Método: `findByClienteIdAndFechaBetween(Long clienteId, LocalDateTime start, LocalDateTime end)` o query personalizada con JOIN
+- [ ] Implementar `ClienteRefRepository` JPA en `infrastructure/output/persistence/`
+  - [ ] Método: `findByClienteId(Long clienteId)` → `Optional<ClienteRef>`
 - [ ] Implementar `ReporteController` GET `/api/reportes` en `infrastructure/input/rest/`
-- [ ] Registrar DTOs y servicios como beans en `infrastructure/config/`
-- [ ] Crear excepciones de dominio si aplica: `ClienteNotFound`, `InvalidDateRange`
+  - [ ] Parsear query parameters
+  - [ ] Validar parámetros
+  - [ ] Llamar a service
+  - [ ] Retornar array o error HTTP según corresponda
+- [ ] Crear excepciones de dominio:
+  - [ ] `ClienteNotFoundException` (404)
+  - [ ] `InvalidDateFormatException` (400)
+  - [ ] `InvalidDateRangeException` (400)
+  - [ ] `MissingParameterException` (400)
 
 #### Tests Backend (Matriz 3-2-1)
 
@@ -348,7 +336,7 @@ public record MovimientoDto(
 |-----------|---------|------------|
 | `ReporteEstadoCuentaServiceTests.java` | 3 por método | `generarReporte_success`: happy path con múltiples cuentas y movimientos<br>`generarReporte_clienteNotFound`: cliente inexistente<br>`generarReporte_dateRangeInvalid`: fecha inicio > fecha fin<br>`filtrarMovimientosporFecha_success`: filtra correctamente<br>`filtrarMovimientosporFecha_emptyRange`: sin movimientos en rango<br>`filtrarMovimientosporFecha_multipleMovements`: múltiples movimientos |
 | `ReporteControllerTests.java` | 3 por endpoint | `getReporte_200_success`: parámetros válidos<br>`getReporte_400_missingClienteParam`: sin parámetro cliente<br>`getReporte_400_missingFechaParam`: sin parámetro fecha<br>`getReporte_400_invalidDateFormat`: fecha en formato incorrecto<br>`getReporte_400_invalidDateRange`: inicio > fin<br>`getReporte_404_clienteNotFound`: cliente no existe |
-| `ClienteGatewayAdapterTests.java` | 2 por método | `getCliente_success`: retorna cliente<br>`getCliente_httpError`: servicio indisponible |
+| `ClienteRefRepositoryTests.java` | 2 por método | `findByClienteId_success`: retorna cliente<br>`findByClienteId_notFound`: cliente inexistente |
 | `MovimientoRepositoryTests.java` | 2 por método | `findByCuentaIdAndFechaBetween_success`: retorna movimientos filtrados<br>`findByCuentaIdAndFechaBetween_empty`: sin movimientos en rango |
 
 **No generar:**

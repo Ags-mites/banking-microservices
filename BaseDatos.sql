@@ -57,6 +57,16 @@ CREATE TABLE cuenta (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE cliente_ref (
+    id BIGSERIAL PRIMARY KEY,
+    cliente_id BIGINT NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    identificacion VARCHAR(50),
+    version INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE movimiento (
     id BIGSERIAL PRIMARY KEY,
     fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -68,6 +78,9 @@ CREATE TABLE movimiento (
     CONSTRAINT fk_movimiento_cuenta FOREIGN KEY (cuenta_id) REFERENCES cuenta(id)
 );
 
+CREATE INDEX idx_cliente_ref_cliente_id ON cliente_ref (cliente_id);
+CREATE INDEX idx_cliente_ref_identificacion ON cliente_ref (identificacion);
+CREATE INDEX idx_movimiento_fecha ON movimiento (fecha);
 CREATE INDEX idx_movimiento_cuenta_fecha ON movimiento (cuenta_id, fecha DESC);
 
 CREATE UNIQUE INDEX uq_movimiento_transaction_id

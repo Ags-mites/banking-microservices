@@ -1,7 +1,9 @@
 package com.bank.bankingservice.domain.ports.out;
 
 import com.bank.bankingservice.domain.model.Movimiento;
+import com.bank.bankingservice.domain.model.MovimientoReporte;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -11,4 +13,6 @@ public interface MovimientoRepository {
     List<Movimiento> findByCuentaId(Long cuentaId, int offset, int limit);
 
     List<Movimiento> findByCuentaIdAndFechaRange(Long cuentaId, LocalDate from, LocalDate to);
+
+    List<MovimientoReporte> findReporteByClienteIdAndFechaBetween(Long clienteId, LocalDateTime start, LocalDateTime end);
 }
