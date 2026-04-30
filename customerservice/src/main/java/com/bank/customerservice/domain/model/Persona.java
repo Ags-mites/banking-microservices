@@ -3,41 +3,36 @@ package com.bank.customerservice.domain.model;
 import java.time.Instant;
 
 public class Persona {
-    
+
     private Long id;
-    private String nombre;
-    private Genero genero;
-    private Integer edad;
-    private String identificacion;
-    private String direccion;
-    private String telefono;
-    private Instant createdAt;
-    private Instant updatedAt;
-    
-    private Persona() {}
-    
-    public static Persona crear(
-        String nombre,
-        Genero genero,
-        Integer edad,
-        String identificacion,
-        String direccion,
-        String telefono
-    ) {
+    protected String nombre;
+    protected Genero genero;
+    protected Integer edad;
+    protected String identificacion;
+    protected String direccion;
+    protected String telefono;
+    protected Instant createdAt;
+    protected Instant updatedAt;
+
+    protected Persona() {}
+
+    protected Persona(String nombre, Genero genero, Integer edad, String identificacion,
+                      String direccion, String telefono) {
         validarNombre(nombre);
         validarIdentificacion(identificacion);
-        
-        Persona persona = new Persona();
-        persona.nombre = nombre;
-        persona.genero = genero;
-        persona.edad = edad;
-        persona.identificacion = identificacion;
-        persona.direccion = direccion;
-        persona.telefono = telefono;
-        persona.createdAt = Instant.now();
-        persona.updatedAt = Instant.now();
-        
-        return persona;
+        this.nombre = nombre;
+        this.genero = genero;
+        this.edad = edad;
+        this.identificacion = identificacion;
+        this.direccion = direccion;
+        this.telefono = telefono;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    public static Persona crear(String nombre, Genero genero, Integer edad, String identificacion,
+                                String direccion, String telefono) {
+        return new Persona(nombre, genero, edad, identificacion, direccion, telefono);
     }
     
     public void actualizar(

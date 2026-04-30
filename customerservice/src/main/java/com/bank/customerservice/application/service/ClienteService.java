@@ -14,6 +14,7 @@ import com.bank.customerservice.application.dto.ClienteUpdateRequest;
 import com.bank.customerservice.application.dto.ClientePatchRequest;
 import com.bank.customerservice.application.dto.ClienteResponse;
 import com.bank.customerservice.application.dto.ClienteCreadoEvent;
+import com.bank.customerservice.application.dto.ClienteActualizadoEvent;
 import com.bank.customerservice.domain.model.Cliente;
 import com.bank.customerservice.domain.model.Cliente.PasswordHasher;
 import com.bank.customerservice.domain.model.Genero;
@@ -144,6 +145,17 @@ public class ClienteService implements ClienteUseCase {
         cliente.actualizar(request.contrasena(), request.estado(), passwordHasher);
         Cliente clienteActualizado = clienteRepository.actualizar(cliente);
         
+        ClienteActualizadoEvent event = new ClienteActualizadoEvent(
+            clienteActualizado.id(),
+            personaActualizada.identificacion(),
+            personaActualizada.nombre()
+        );
+        try {
+            eventPublisher.publicarClienteActualizadoEvent(event);
+        } catch (Exception e) {
+            System.err.println("Error al publicar evento cliente.actualizado: " + e.getMessage());
+        }
+        
         return toClienteResponse(clienteActualizado, personaActualizada);
     }
     
@@ -175,6 +187,17 @@ public class ClienteService implements ClienteUseCase {
         
         cliente.actualizar(request.contrasena(), request.estado(), passwordHasher);
         Cliente clienteActualizado = clienteRepository.actualizar(cliente);
+        
+        ClienteActualizadoEvent event = new ClienteActualizadoEvent(
+            clienteActualizado.id(),
+            personaActualizada.identificacion(),
+            personaActualizada.nombre()
+        );
+        try {
+            eventPublisher.publicarClienteActualizadoEvent(event);
+        } catch (Exception e) {
+            System.err.println("Error al publicar evento cliente.actualizado en PATCH: " + e.getMessage());
+        }
         
         return toClienteResponse(clienteActualizado, personaActualizada);
     }

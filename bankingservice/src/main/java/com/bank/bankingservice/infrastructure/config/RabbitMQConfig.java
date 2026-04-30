@@ -27,9 +27,15 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_NAME = "customer.events";
     public static final String ROUTING_KEY_CLIENTE_CREADO = "cliente.creado";
     public static final String QUEUE_CLIENTE_CREADO = "cliente.creado.queue";
+    
+    public static final String ROUTING_KEY_CLIENTE_ACTUALIZADO = "cliente.actualizado";
+    public static final String QUEUE_CLIENTE_ACTUALIZADO = "cliente.actualizado.queue";
+    
     public static final String DEADLETTER_EXCHANGE = "customer.events.dlx";
     public static final String DEADLETTER_QUEUE = "cliente.creado.deadletter.queue";
     public static final String DEADLETTER_ROUTING_KEY = "cliente.creado.deadletter";
+    public static final String DEADLETTER_ACTUALIZADO_QUEUE = "cliente.actualizado.deadletter.queue";
+    public static final String DEADLETTER_ACTUALIZADO_ROUTING_KEY = "cliente.actualizado.deadletter";
 
     @Bean
     public DirectExchange customerEventsExchange() {
@@ -55,6 +61,19 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue clienteActualizadoQueue() {
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("x-dead-letter-exchange", DEADLETTER_EXCHANGE);
+        arguments.put("x-dead-letter-routing-key", DEADLETTER_ACTUALIZADO_ROUTING_KEY);
+        return new Queue(QUEUE_CLIENTE_ACTUALIZADO, true, false, false, arguments);
+    }
+
+    @Bean
+    public Queue clienteActualizadoDeadLetterQueue() {
+        return new Queue(DEADLETTER_ACTUALIZADO_QUEUE, true);
+    }
+
+    @Bean
     public Binding clienteCreadoBinding(Queue clienteCreadoQueue, DirectExchange customerEventsExchange) {
         return BindingBuilder.bind(clienteCreadoQueue)
                 .to(customerEventsExchange)
@@ -66,6 +85,20 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(clienteCreadoDeadLetterQueue)
                 .to(deadLetterExchange)
                 .with(DEADLETTER_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding clienteActualizadoBinding(Queue clienteActualizadoQueue, DirectExchange customerEventsExchange) {
+        return BindingBuilder.bind(clienteActualizadoQueue)
+                .to(customerEventsExchange)
+                .with(ROUTING_KEY_CLIENTE_ACTUALIZADO);
+    }
+
+    @Bean
+    public Binding clienteActualizadoDeadLetterBinding(Queue clienteActualizadoDeadLetterQueue, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(clienteActualizadoDeadLetterQueue)
+                .to(deadLetterExchange)
+                .with(DEADLETTER_ACTUALIZADO_ROUTING_KEY);
     }
 
     @Bean
@@ -104,18 +137,18 @@ public class RabbitMQConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            MessageConverter messageConverter,
-            RetryTemplate rabbitRetryTemplate
+            MessageConverter messageConverter
     ) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
         factory.setDefaultRequeueRejected(false);
         factory.setAdviceChain(
-                org.springframework.amqp.rabbit.config.RetryInterceptorBuilder.stateless()
-                        .retryOperations(rabbitRetryTemplate)
-                        .recoverer(new RejectAndDontRequeueRecoverer())
-                        .build()
+            org.springframework.amqp.rabbit.config.RetryInterceptorBuilder.stateless()
+                .maxRetries(3)
+                .backOffOptions(1000L, 2.0, 10000L)
+                .recoverer(new RejectAndDontRequeueRecoverer())
+                .build()
         );
         return factory;
     }

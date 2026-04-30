@@ -19,8 +19,10 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_NAME = "customer.events";
 
     public static final String ROUTING_KEY_CLIENTE_CREADO = "cliente.creado";
-    
     public static final String QUEUE_CLIENTE_CREADO = "cliente.creado.queue";
+
+    public static final String ROUTING_KEY_CLIENTE_ACTUALIZADO = "cliente.actualizado";
+    public static final String QUEUE_CLIENTE_ACTUALIZADO = "cliente.actualizado.queue";
     
     @Bean
     public DirectExchange customerEventsExchange() {
@@ -29,7 +31,10 @@ public class RabbitMQConfig {
     
     @Bean
     public Queue clienteCreadoQueue() {
-        return new Queue(QUEUE_CLIENTE_CREADO, true);
+        java.util.Map<String, Object> arguments = new java.util.HashMap<>();
+        arguments.put("x-dead-letter-exchange", "customer.events.dlx");
+        arguments.put("x-dead-letter-routing-key", "cliente.creado.deadletter");
+        return new Queue(QUEUE_CLIENTE_CREADO, true, false, false, arguments);
     }
     
     @Bean
@@ -37,6 +42,21 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(clienteCreadoQueue)
             .to(customerEventsExchange)
             .with(ROUTING_KEY_CLIENTE_CREADO);
+    }
+    
+    @Bean
+    public Queue clienteActualizadoQueue() {
+        java.util.Map<String, Object> arguments = new java.util.HashMap<>();
+        arguments.put("x-dead-letter-exchange", "customer.events.dlx");
+        arguments.put("x-dead-letter-routing-key", "cliente.actualizado.deadletter");
+        return new Queue(QUEUE_CLIENTE_ACTUALIZADO, true, false, false, arguments);
+    }
+    
+    @Bean
+    public Binding clienteActualizadoBinding(Queue clienteActualizadoQueue, DirectExchange customerEventsExchange) {
+        return BindingBuilder.bind(clienteActualizadoQueue)
+            .to(customerEventsExchange)
+            .with(ROUTING_KEY_CLIENTE_ACTUALIZADO);
     }
     
     @Bean
